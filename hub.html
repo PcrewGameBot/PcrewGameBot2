@@ -1,16 +1,66 @@
 <!DOCTYPE html><html lang="my"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Games</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>body{margin:0;padding:18px;background:#030617;color:#e6f4ff;font-family:system-ui,"Noto Sans Myanmar",sans-serif}
-h1{font-size:24px;color:#2ec8ff;margin:4px 0 14px}h2{font-size:16px;margin:22px 0 6px}
-a.g{display:block;background:#07204a;border:1px solid #1d5fa8;border-radius:14px;padding:18px;margin:10px 0;color:inherit;text-decoration:none;font-size:19px}
-ol{margin:0;padding-left:22px;color:#9cc4e8;line-height:1.8}</style></head><body>
-<h1>🎮 Game Hub</h1><div id="list"></div><div id="boards"></div>
+<style>
+:root{--bg:#0a0e1f;--card:#131a33;--ink:#eef3ff;--dim:#8b97b8;--acc:#7c6cff;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Myanmar","Segoe UI",sans-serif;padding:14px 14px calc(96px + env(safe-area-inset-bottom));min-height:100vh}
+.top{display:flex;align-items:center;gap:12px;padding:6px 2px 16px}
+.av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#7c6cff,#2ec8ff);display:grid;place-items:center;font-weight:800;font-size:20px;overflow:hidden;border:2px solid #7c6cff66;flex:none}
+.av img{width:100%;height:100%;object-fit:cover}
+.top small{display:block;color:var(--dim);font-size:12px}.top b{font-size:18px}
+.card{position:relative;display:block;height:150px;border-radius:24px;margin:0 0 14px;overflow:hidden;color:#fff;text-decoration:none;isolation:isolate;box-shadow:0 8px 24px #0006;transition:transform .15s}
+.card:active{transform:scale(.97)}
+.art{position:absolute;inset:0;z-index:1}
+.tag{position:absolute;top:14px;left:14px;background:#fff;color:#e8590c;font-weight:800;font-size:12px;padding:5px 11px;border-radius:12px;z-index:3}
+.cn{position:absolute;left:16px;bottom:14px;right:16px;z-index:3;font-weight:900;font-size:24px;text-shadow:0 2px 8px #0006}
+.cn small{display:block;font-size:12px;font-weight:600;opacity:.9}
+.rain{position:absolute;inset:0;background:repeating-linear-gradient(105deg,transparent 0 14px,#ffffff26 14px 15px);background-size:60px 60px;animation:rain .8s linear infinite;opacity:.5}
+@keyframes rain{to{background-position:-30px 60px}}
+.orb{position:absolute;border-radius:50%;background:radial-gradient(#fff 30%,#9fe8ff 60%,transparent 72%);animation:fl 3s ease-in-out infinite}
+.o1{width:26px;height:26px;right:130px;top:30px}.o2{width:16px;height:16px;right:30px;top:92px;animation-delay:-1s}.o3{width:20px;height:20px;right:176px;top:98px;animation-delay:-2s}
+@keyframes fl{50%{transform:translateY(-12px)}}
+.bolt{position:absolute;right:70px;top:10px;height:130px;filter:drop-shadow(0 0 10px #7df);animation:fk 2.6s infinite}
+@keyframes fk{0%,100%{opacity:1}6%{opacity:.2}9%{opacity:1}12%{opacity:.3}50%{opacity:.9}}
+.em{position:absolute;right:28px;top:20px;font-size:84px;animation:fl 3s ease-in-out infinite}
+.soon{border:2px dashed #2a3560;border-radius:24px;padding:26px;text-align:center;color:var(--dim);font-size:14px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:10px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#0a0e1fdd;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid #1c2548}
+nav button{flex:1;max-width:170px;background:none;border:0;color:var(--dim);border-radius:18px;padding:9px 0;font:600 12px system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc);color:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;margin-bottom:12px}
+.chip{flex:none;background:var(--card);color:var(--ink);border:1px solid #243060;border-radius:16px;padding:9px 14px;font-size:14px}
+.chip.on{background:var(--acc);border-color:var(--acc)}
+.row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:13px 14px;margin-bottom:8px}
+.row.me{outline:2px solid var(--acc)}.rk{width:30px;text-align:center;font-weight:800}
+.pn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sc{font-weight:800;color:#7dd3fc}
+.empty{color:var(--dim);text-align:center;padding:30px 10px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head><body>
+<div class="top"><div class="av" id="av"></div><div><small>မင်္ဂလာပါ</small><b id="nm"></b></div></div>
+<div id="v"></div>
+<nav><button data-t="home" class="on"><i>🏠</i>Home</button><button data-t="lb"><i>🏆</i>Leaderboard</button></nav>
 <script>
-const tg=window.Telegram&&Telegram.WebApp;if(tg){tg.ready();tg.expand();tg.BackButton.hide()}
-(async()=>{try{const gs=await (await fetch('/api/games')).json();const L=document.getElementById('list'),B=document.getElementById('boards');
-for(const g of gs){const a=document.createElement('a');a.className='g';a.href='/g/'+g.id;a.textContent=g.emoji+'  '+g.title;L.appendChild(a);
-const h=document.createElement('h2');h.textContent='🏆 '+g.title;const o=document.createElement('ol');B.append(h,o);
-const r=await (await fetch('/api/leaderboard?game='+g.id)).json();
-if(!r.length){const li=document.createElement('li');li.textContent='မရှိသေးပါ';o.appendChild(li)}
-r.forEach(x=>{const li=document.createElement('li');li.textContent=x.name+' - '+x.score;o.appendChild(li)})}}catch(e){}})();
+const tg=window.Telegram&&Telegram.WebApp,U=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||{};
+if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#0a0e1f');tg.setBackgroundColor('#0a0e1f')}catch(e){}tg.BackButton.hide()}
+const $=id=>document.getElementById(id),nm=U.first_name||'Player';
+function h(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+$('nm').textContent=nm;const av=$('av'),ini=()=>{av.textContent=nm[0].toUpperCase()};
+if(U.photo_url){const i=new Image();i.src=U.photo_url;i.onerror=ini;av.appendChild(i)}else ini();
+/* ဂိမ်းအသစ်ထည့်ရင် ဒီမှာ ပုံစံ တစ်ခုထပ်ထည့်ပါ (မထည့်ရင် အလိုအလျောက် အရောင်တစ်မျိုးရမယ်) */
+const TH={thunderstorm:{bg:'linear-gradient(135deg,#0b1d4a,#1d4ed8 55%,#38bdf8)',tag:'HOT',sub:'မိုးကြိုးကို ရှောင်ပါ',
+art:'<i class="rain"></i><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><svg class="bolt" viewBox="0 0 60 100"><path d="M40 0 6 56h22L16 100 54 38H33z" fill="#fff"/></svg>'}};
+const FB=['linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#6d28d9,#a855f7)','linear-gradient(135deg,#047857,#34d399)','linear-gradient(135deg,#be123c,#fb7185)'];
+let games=[],cur=null;
+function home(){const v=$('v');v.innerHTML='';
+ games.forEach((g,i)=>{const t=TH[g.id]||{},a=h('a','card');a.href='/g/'+g.id;a.style.background=t.bg||FB[i%FB.length];
+  const art=h('div','art');if(t.art)art.innerHTML=t.art;else art.append(h('div','em',g.emoji));a.append(art);
+  if(t.tag)a.append(h('div','tag',t.tag));const cn=h('div','cn',g.title);if(t.sub)cn.append(h('small','',t.sub));a.append(cn);v.append(a)});
+ v.append(h('div','soon','နောက်ထပ် ဂိမ်းတွေ မကြာခင် လာမယ်'))}
+async function board(){const v=$('v');v.innerHTML='';const chips=h('div','chips');
+ games.forEach(g=>{const c=h('button','chip'+(g.id===cur?' on':''),g.emoji+' '+g.title);c.onclick=()=>{cur=g.id;board()};chips.append(c)});v.append(chips);
+ const box=h('div','');v.append(box);let r=[];try{r=await (await fetch('/api/leaderboard?game='+cur)).json()}catch(e){}
+ if(!r.length)box.append(h('div','empty','ရမှတ် မရှိသေးပါ၊ ပထမဆုံး ဖြစ်လိုက်ပါ'));
+ r.forEach((x,i)=>{const row=h('div','row'+(x.name===nm?' me':''));row.append(h('span','rk',['🥇','🥈','🥉'][i]||String(i+1)),h('span','pn',x.name),h('span','sc',String(x.score)));box.append(row)})}
+function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='home'?home():board()}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+fetch('/api/games').then(r=>r.json()).then(g=>{games=g;cur=g[0]&&g[0].id;tab('home')}).catch(()=>{$('v').append(h('div','empty','ချိတ်ဆက်လို့မရပါ'))});
 </script></body></html>
