@@ -15,9 +15,32 @@ GAMES = {
     "thunderstorm": {"title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html"},
 }
 
-db = sqlite3.connect(DB, check_same_thread=False)
-db.execute("CREATE TABLE IF NOT EXISTS scores(game TEXT, uid INTEGER, name TEXT, score INTEGER, ts INTEGER, PRIMARY KEY(game, uid))")
-db.commit()
+# DATABASE_URL ရှိရင် Postgres (ဘယ်တော့မှ မပျောက်), မရှိရင် SQLite သုံးမယ်
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+if DATABASE_URL:
+    import psycopg2
+
+    def q(sql, args=(), fetch=False):
+        conn = psycopg2.connect(DATABASE_URL)
+        try:
+            with conn, conn.cursor() as cur:
+                cur.execute(sql.replace("?", "%s"), args)
+                return cur.fetchall() if fetch else None
+        finally:
+            conn.close()
+
+    BEST = "GREATEST(scores.score, excluded.score)"
+else:
+    _db = sqlite3.connect(DB, check_same_thread=False)
+
+    def q(sql, args=(), fetch=False):
+        cur = _db.execute(sql, args)
+        _db.commit()
+        return cur.fetchall() if fetch else None
+
+    BEST = "MAX(score, excluded.score)"
+
+q("CREATE TABLE IF NOT EXISTS scores(game TEXT, uid BIGINT, name TEXT, score BIGINT, ts BIGINT, PRIMARY KEY(game, uid))")
 
 
 def verify(init_data):
@@ -38,7 +61,7 @@ def verify(init_data):
 
 
 def top_rows(game, n=10):
-    return db.execute("SELECT name, score FROM scores WHERE game=? ORDER BY score DESC LIMIT ?", (game, n)).fetchall()
+    return q("SELECT name, score FROM scores WHERE game=? ORDER BY score DESC LIMIT ?", (game, n), True)
 
 
 async def hub(req):
@@ -71,12 +94,11 @@ async def api_score(req):
     if not u or g not in GAMES or not isinstance(s, int) or not 0 <= s <= 1_000_000:
         return web.json_response({"ok": False}, status=400)
     name = (u.get("first_name") or u.get("username") or "Player")[:20]
-    db.execute(
+    q(
         "INSERT INTO scores VALUES(?,?,?,?,?) ON CONFLICT(game,uid) DO UPDATE SET "
-        "name=excluded.name, score=MAX(score, excluded.score), ts=excluded.ts",
+        "name=excluded.name, score=" + BEST + ", ts=excluded.ts",
         (g, u["id"], name, s, int(time.time())),
     )
-    db.commit()
     return web.json_response({"ok": True})
 
 
