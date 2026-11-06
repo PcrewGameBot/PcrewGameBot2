@@ -38,6 +38,15 @@ nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc
 .empty{color:var(--dim);text-align:center;padding:30px 10px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
+
+.stars{position:absolute;inset:0;background:radial-gradient(#fff 1px,transparent 1.5px) 0 0/34px 34px,radial-gradient(#ffffffaa 1px,transparent 1.5px) 17px 17px/34px 34px;animation:st 2.4s linear infinite;opacity:.55}
+@keyframes st{to{background-position:0 34px,17px 51px}}
+.planet{position:absolute;right:-26px;top:-30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffd1f7,#a855f7 55%,#4c1d95);opacity:.8}
+.ship{position:absolute;right:92px;top:46px;font-size:52px;transform:rotate(-45deg);animation:fl 2.6s ease-in-out infinite}
+.ufo{position:absolute;right:40px;top:22px;font-size:34px;animation:fl 2s ease-in-out infinite reverse}
+.beam{position:absolute;width:3px;height:16px;border-radius:2px;background:#7fe0ff;box-shadow:0 0 8px #7fe0ff;animation:bm 1s linear infinite}
+.b1{right:70px;top:80px}.b2{right:120px;top:100px;animation-delay:-.5s}
+@keyframes bm{from{transform:translateY(40px);opacity:1}to{transform:translateY(-50px);opacity:0}}
 /* Glossy gradient pill buttons */
 .pill,.gbtn,.chip.on,nav button.on,.go,.cb,.ib{isolation:isolate;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;letter-spacing:.5px;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
 .gbtn,.chip,nav button,.go,.cb,.ib{position:relative}
@@ -57,6 +66,8 @@ if(U.photo_url){const i=new Image();i.src=U.photo_url;i.onerror=ini;av.appendChi
 /* New game: add its look here (without an entry it gets an automatic color) */
 const TH={thunderstorm:{bg:'linear-gradient(135deg,#0b1d4a,#1d4ed8 55%,#38bdf8)',tag:'HOT',sub:'Dodge the storm',
 art:'<i class="rain"></i><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><svg class="bolt" viewBox="0 0 60 100"><path d="M40 0 6 56h22L16 100 54 38H33z" fill="#fff"/></svg>'}};
+TH.spaceshooter={bg:'linear-gradient(135deg,#1b0b45,#6d28d9 55%,#d946ef)',tag:'NEW',sub:'Blast the invaders',
+art:'<i class="stars"></i><i class="planet"></i><i class="beam b1"></i><i class="beam b2"></i><span class="ship">🚀</span><span class="ufo">👾</span>'};
 const FB=['linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#6d28d9,#a855f7)','linear-gradient(135deg,#047857,#34d399)','linear-gradient(135deg,#be123c,#fb7185)'];
 let games=[],cur=null;
 function home(){const v=$('v');v.innerHTML='';

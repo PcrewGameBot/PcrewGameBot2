@@ -59,6 +59,7 @@ BOT = None
 # xp = XP per 1 score point, used for the Overall leaderboard (0.1 = 100 score is 10 XP).
 GAMES = {
     "thunderstorm": {"title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html", "xp": 0.1},
+    "spaceshooter": {"title": "Space Shooter", "emoji": "🚀", "file": "spaceshooter.html", "xp": 0.05},
 }
 
 # DATABASE_URL set = Postgres (data is never lost), otherwise SQLite
