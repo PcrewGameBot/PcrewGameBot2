@@ -1,25 +1,54 @@
-import os, json, hmac, hashlib, time, sqlite3, asyncio
+import os, json, hmac, hashlib, time, sqlite3, asyncio, html
+from datetime import datetime, timezone
 from urllib.parse import parse_qsl
 from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, MenuButtonWebApp
+from telegram.constants import ParseMode
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = os.environ["BOT_TOKEN"].strip()
-URL = "".join(os.environ.get("WEBAPP_URL", "").split()).rstrip("/")  # space တွေ အကုန်ဖယ်
+
+def env(name, default=""):
+    # removes every space and newline, so copy-paste mistakes cannot break a value
+    return "".join(os.environ.get(name, default).split())
+
+
+TOKEN = env("BOT_TOKEN")
+URL = env("WEBAPP_URL").rstrip("/")
 if URL and not URL.startswith("http"):
     URL = "https://" + URL
-PORT = int(os.environ.get("PORT", 8080))
-DB = os.environ.get("DB_PATH", "/data/scores.db" if os.path.isdir("/data") else "scores.db")
+PORT = int(env("PORT") or 8080)
+DB = env("DB_PATH") or ("/data/scores.db" if os.path.isdir("/data") else "scores.db")
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# ဂိမ်းအသစ်ထည့်ချင်ရင် ဖိုင်တင်ပြီး ဒီစာရင်းမှာ တစ်ကြောင်း ထပ်ထည့်ပါ
-# xp = ရမှတ် ၁ မှတ်ကို XP ဘယ်လောက်ပေးမလဲ (Overall Leaderboard အတွက်၊ 0.1 = ရမှတ် ၁၀၀ က XP ၁၀)
+# Join gate: set CHANNEL and GROUP as @username (or a numeric chat id for private ones).
+# For private chats also set CHANNEL_LINK / GROUP_LINK (invite links).
+CHANNEL = env("CHANNEL")
+GROUP = env("GROUP")
+CHANNEL_LINK = env("CHANNEL_LINK") or (f"https://t.me/{CHANNEL.lstrip('@')}" if CHANNEL.startswith("@") else "")
+GROUP_LINK = env("GROUP_LINK") or (f"https://t.me/{GROUP.lstrip('@')}" if GROUP.startswith("@") else "")
+LOG_CHAT = env("LOG_CHAT_ID")
+if LOG_CHAT.lstrip("-").isdigit():
+    LOG_CHAT = int(LOG_CHAT)
+
+CAPTION = (
+    "<b>🎮 Welcome to the PcrewGame Universe!</b>\n\n"
+    "🔥 Your adventure starts here.\n"
+    "🏆 Play • Compete • Win\n"
+    "💎 Earn rewards and become a legend!\n"
+    "🚀 Let’s Play!"
+)
+WELCOME_IMG = os.path.join(HERE, "welcome.jpg")
+FILE_ID = None
+BOT = None
+
+# To add a game: upload its html file and add one line here.
+# xp = XP per 1 score point, used for the Overall leaderboard (0.1 = 100 score is 10 XP).
 GAMES = {
     "thunderstorm": {"title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html", "xp": 0.1},
 }
 
-# DATABASE_URL ရှိရင် Postgres (ဘယ်တော့မှ မပျောက်), မရှိရင် SQLite သုံးမယ်
-DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+# DATABASE_URL set = Postgres (data is never lost), otherwise SQLite
+DATABASE_URL = env("DATABASE_URL")
 if DATABASE_URL:
     import psycopg2
 
@@ -47,7 +76,7 @@ q("CREATE TABLE IF NOT EXISTS scores(game TEXT, uid BIGINT, name TEXT, score BIG
 
 
 def verify(init_data):
-    """Telegram က ပို့တဲ့ initData အစစ်ဟုတ်မဟုတ် စစ်တယ် (ရမှတ်အတုမပို့နိုင်အောင်)"""
+    """Checks that the data really comes from Telegram, so scores cannot be faked."""
     try:
         d = dict(parse_qsl(init_data, strict_parsing=True))
         h = d.pop("hash")
@@ -63,12 +92,39 @@ def verify(init_data):
         return None
 
 
+_ok_cache = {}
+
+
+async def joined(uid):
+    """True if the user is in the required channel and group."""
+    if not (CHANNEL or GROUP):
+        return True
+    c = _ok_cache.get(uid)
+    if c and time.time() - c < 60:
+        return True
+    for chat in (CHANNEL, GROUP):
+        if not chat:
+            continue
+        try:
+            cid = int(chat) if chat.lstrip("-").isdigit() else chat
+            m = await BOT.get_chat_member(cid, uid)
+            ok = m.status in ("member", "administrator", "creator") or (
+                m.status == "restricted" and getattr(m, "is_member", False))
+        except Exception as e:
+            print("membership check error:", chat, e)
+            ok = False
+        if not ok:
+            return False
+    _ok_cache[uid] = time.time()
+    return True
+
+
 def top_rows(game, n=10):
     return q("SELECT name, score FROM scores WHERE game=? ORDER BY score DESC LIMIT ?", (game, n), True)
 
 
 def overall_rows(n=10):
-    """ဂိမ်းအားလုံးရဲ့ အမြင့်ဆုံးရမှတ်ကို XP ပြောင်းပြီး ပေါင်းတယ်"""
+    """Best score of every game, converted to XP and added together."""
     tot, names = {}, {}
     for uid, name, game, score in q("SELECT uid, name, game, score FROM scores", (), True):
         g = GAMES.get(game)
@@ -94,6 +150,18 @@ async def api_games(req):
     return web.json_response([{"id": k, "title": v["title"], "emoji": v["emoji"]} for k, v in GAMES.items()])
 
 
+async def api_me(req):
+    try:
+        b = await req.json()
+    except Exception:
+        b = {}
+    u = verify(b.get("initData", ""))
+    if not u:
+        return web.json_response({"ok": False})
+    return web.json_response({"ok": True, "joined": await joined(u["id"]),
+                              "channel": CHANNEL_LINK, "group": GROUP_LINK})
+
+
 async def api_top(req):
     game = req.query.get("game", "")
     rows = overall_rows() if game == "overall" else top_rows(game)
@@ -109,6 +177,8 @@ async def api_score(req):
     g, s = b.get("game"), b.get("score")
     if not u or g not in GAMES or not isinstance(s, int) or not 0 <= s <= 1_000_000:
         return web.json_response({"ok": False}, status=400)
+    if not await joined(u["id"]):
+        return web.json_response({"ok": False, "joined": False}, status=403)
     name = (u.get("first_name") or u.get("username") or "Player")[:20]
     q(
         "INSERT INTO scores VALUES(?,?,?,?,?) ON CONFLICT(game,uid) DO UPDATE SET "
@@ -118,32 +188,74 @@ async def api_score(req):
     return web.json_response({"ok": True})
 
 
-def play_button():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("🎮 ဂိမ်းဆော့မယ်", web_app=WebAppInfo(url=URL))]])
+def start_kb():
+    rows, r = [], []
+    if CHANNEL_LINK:
+        r.append(InlineKeyboardButton("📢 Channel", url=CHANNEL_LINK))
+    if GROUP_LINK:
+        r.append(InlineKeyboardButton("👥 Group", url=GROUP_LINK))
+    if r:
+        rows.append(r)
+    if URL:
+        rows.append([InlineKeyboardButton("▶️ Start", web_app=WebAppInfo(url=URL))])
+    return InlineKeyboardMarkup(rows)
+
+
+async def log_start(bot, u):
+    if not LOG_CHAT:
+        return
+    name = html.escape(" ".join(filter(None, [u.first_name, u.last_name])) or "-")
+    uname = "@" + html.escape(u.username) if u.username else "-"
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    text = (f"<blockquote>🚀 New start\n"
+            f"👤 Name: {name}\n"
+            f"🔗 Username: {uname}\n"
+            f"🆔 ID: <code>{u.id}</code>\n"
+            f"🕒 Time: {now}</blockquote>")
+    try:
+        await bot.send_message(LOG_CHAT, text, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        print("log error:", e)
 
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if not URL:
-        await update.message.reply_text("WEBAPP_URL မသတ်မှတ်ရသေးပါ")
-        return
-    await update.message.reply_text("🎮 ဂိမ်းတွေ ဆော့ရအောင်!", reply_markup=play_button())
+    global FILE_ID
+    msg = update.message
+    kb = start_kb()
+    try:
+        if FILE_ID:
+            await msg.reply_photo(FILE_ID, caption=CAPTION, parse_mode=ParseMode.HTML, reply_markup=kb)
+        else:
+            with open(WELCOME_IMG, "rb") as f:
+                sent = await msg.reply_photo(f, caption=CAPTION, parse_mode=ParseMode.HTML, reply_markup=kb)
+            FILE_ID = sent.photo[-1].file_id
+    except FileNotFoundError:
+        await msg.reply_text(CAPTION, parse_mode=ParseMode.HTML, reply_markup=kb)
+    await log_start(ctx.bot, update.effective_user)
 
 
 async def top(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    orows = overall_rows(5)
-    olines = [f"{i+1}. {n} - {s} XP" for i, (n, s) in enumerate(orows)] or ["မရှိသေးပါ"]
-    parts = ["🌟 Overall XP\n" + "\n".join(olines)]
+    rows = overall_rows(5)
+    lines = [f"{i+1}. {n} - {s} XP" for i, (n, s) in enumerate(rows)] or ["No scores yet"]
+    parts = ["🌟 Overall XP\n" + "\n".join(lines)]
     for k, v in GAMES.items():
         rows = top_rows(k, 5)
-        lines = [f"{i+1}. {n} - {s}" for i, (n, s) in enumerate(rows)] or ["မရှိသေးပါ"]
+        lines = [f"{i+1}. {n} - {s}" for i, (n, s) in enumerate(rows)] or ["No scores yet"]
         parts.append(f"{v['emoji']} {v['title']}\n" + "\n".join(lines))
     await update.message.reply_text("🏆 Leaderboard\n\n" + "\n\n".join(parts))
 
 
+async def chat_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"Chat ID: {update.effective_chat.id}")
+
+
 async def main():
+    global BOT
     app = Application.builder().token(TOKEN).build()
+    BOT = app.bot
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("top", top))
+    app.add_handler(CommandHandler("id", chat_id))
 
     web_app = web.Application()
     web_app.add_routes([
@@ -152,6 +264,7 @@ async def main():
         web.get("/api/games", api_games),
         web.get("/api/leaderboard", api_top),
         web.post("/api/score", api_score),
+        web.post("/api/me", api_me),
     ])
     runner = web.AppRunner(web_app)
     await runner.setup()

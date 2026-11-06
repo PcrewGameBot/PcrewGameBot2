@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="my"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Games</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Games</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root{--bg:#0a0e1f;--card:#131a33;--ink:#eef3ff;--dim:#8b97b8;--acc:#7c6cff;color-scheme:dark}
@@ -12,7 +12,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple
 .card:active{transform:scale(.97)}
 .art{position:absolute;inset:0;z-index:1}
 .tag{position:absolute;top:14px;left:14px;background:#fff;color:#e8590c;font-weight:800;font-size:12px;padding:5px 11px;border-radius:12px;z-index:3}
-.cn{position:absolute;left:16px;bottom:14px;right:16px;z-index:3;font-weight:900;font-size:24px;text-shadow:0 2px 8px #0006}
+.cn{position:absolute;left:16px;bottom:14px;right:120px;z-index:3;font-weight:900;font-size:21px;line-height:1.2;text-shadow:0 2px 8px #0006}
 .cn small{display:block;font-size:12px;font-weight:600;opacity:.9}
 .rain{position:absolute;inset:0;background:repeating-linear-gradient(105deg,transparent 0 14px,#ffffff26 14px 15px);background-size:60px 60px;animation:rain .8s linear infinite;opacity:.5}
 @keyframes rain{to{background-position:-30px 60px}}
@@ -32,10 +32,19 @@ nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc
 .row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:13px 14px;margin-bottom:8px}
 .row.me{outline:2px solid var(--acc)}.rk{width:30px;text-align:center;font-weight:800}
 .pn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sc{font-weight:800;color:#7dd3fc}
+.gate{text-align:center;padding:40px 8px}.gate h2{margin:0 0 8px;font-size:24px}.gate p{color:var(--dim);margin:0 0 22px}
+.gbtn{display:block;width:100%;padding:15px;margin:0 0 12px;font-size:16px;text-decoration:none;text-align:center;font-family:system-ui,sans-serif}
+.play{position:absolute;right:14px;bottom:16px;z-index:3;padding:10px 24px;font-size:15px}
 .empty{color:var(--dim);text-align:center;padding:30px 10px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* Glossy gradient pill buttons */
+.pill,.gbtn,.chip.on,nav button.on,.go,.cb,.ib{isolation:isolate;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;letter-spacing:.5px;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
+.gbtn,.chip,nav button,.go,.cb,.ib{position:relative}
+.pill::before,.gbtn::before,.chip.on::before,nav button.on::before,.go::before,.cb::before,.ib::before{content:"";position:absolute;z-index:-1;left:9%;right:9%;top:3px;height:44%;border-radius:999px;background:linear-gradient(180deg,#ffffffb3,#ffffff14);pointer-events:none}
+.pill:active,.gbtn:active,.chip.on:active,nav button.on:active,.go:active,.cb:active,.ib:active{transform:translateY(1px) scale(.97);filter:brightness(.92)}
 </style></head><body>
-<div class="top"><div class="av" id="av"></div><div><small>မင်္ဂလာပါ</small><b id="nm"></b></div></div>
+<div class="top"><div class="av" id="av"></div><div><small>Hello</small><b id="nm"></b></div></div>
 <div id="v"></div>
 <nav><button data-t="home" class="on"><i>🏠</i>Home</button><button data-t="lb"><i>🏆</i>Leaderboard</button></nav>
 <script>
@@ -45,22 +54,34 @@ const $=id=>document.getElementById(id),nm=U.first_name||'Player';
 function h(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
 $('nm').textContent=nm;const av=$('av'),ini=()=>{av.textContent=nm[0].toUpperCase()};
 if(U.photo_url){const i=new Image();i.src=U.photo_url;i.onerror=ini;av.appendChild(i)}else ini();
-/* ဂိမ်းအသစ်ထည့်ရင် ဒီမှာ ပုံစံ တစ်ခုထပ်ထည့်ပါ (မထည့်ရင် အလိုအလျောက် အရောင်တစ်မျိုးရမယ်) */
-const TH={thunderstorm:{bg:'linear-gradient(135deg,#0b1d4a,#1d4ed8 55%,#38bdf8)',tag:'HOT',sub:'မိုးကြိုးကို ရှောင်ပါ',
+/* New game: add its look here (without an entry it gets an automatic color) */
+const TH={thunderstorm:{bg:'linear-gradient(135deg,#0b1d4a,#1d4ed8 55%,#38bdf8)',tag:'HOT',sub:'Dodge the storm',
 art:'<i class="rain"></i><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><svg class="bolt" viewBox="0 0 60 100"><path d="M40 0 6 56h22L16 100 54 38H33z" fill="#fff"/></svg>'}};
 const FB=['linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#6d28d9,#a855f7)','linear-gradient(135deg,#047857,#34d399)','linear-gradient(135deg,#be123c,#fb7185)'];
 let games=[],cur=null;
 function home(){const v=$('v');v.innerHTML='';
  games.forEach((g,i)=>{const t=TH[g.id]||{},a=h('a','card');a.href='/g/'+g.id;a.style.background=t.bg||FB[i%FB.length];
-  const art=h('div','art');if(t.art)art.innerHTML=t.art;else art.append(h('div','em',g.emoji));a.append(art);
+  const art=h('div','art');if(t.art)art.innerHTML=t.art;else art.append(h('div','em',g.emoji));a.append(art);a.append(h('div','play pill','PLAY'));
   if(t.tag)a.append(h('div','tag',t.tag));const cn=h('div','cn',g.title);if(t.sub)cn.append(h('small','',t.sub));a.append(cn);v.append(a)});
- v.append(h('div','soon','နောက်ထပ် ဂိမ်းတွေ မကြာခင် လာမယ်'))}
+ v.append(h('div','soon','More games coming soon'))}
 async function board(){const v=$('v');v.innerHTML='';const chips=h('div','chips');
  [{id:'overall',emoji:'🌟',title:'Overall XP'}].concat(games).forEach(g=>{const c=h('button','chip'+(g.id===cur?' on':''),g.emoji+' '+g.title);c.onclick=()=>{cur=g.id;board()};chips.append(c)});v.append(chips);
  const box=h('div','');v.append(box);let r=[];try{r=await (await fetch('/api/leaderboard?game='+cur)).json()}catch(e){}
- if(!r.length)box.append(h('div','empty','ရမှတ် မရှိသေးပါ၊ ပထမဆုံး ဖြစ်လိုက်ပါ'));
+ if(!r.length)box.append(h('div','empty','No scores yet. Be the first!'));
  r.forEach((x,i)=>{const row=h('div','row'+(x.name===nm?' me':''));row.append(h('span','rk',['🥇','🥈','🥉'][i]||String(i+1)),h('span','pn',x.name),h('span','sc',x.score+(cur==='overall'?' XP':'')));box.append(row)})}
 function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='home'?home():board()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
-fetch('/api/games').then(r=>r.json()).then(g=>{games=g;cur='overall';tab('home')}).catch(()=>{$('v').append(h('div','empty','ချိတ်ဆက်လို့မရပါ'))});
+const nav=document.querySelector('nav');
+function openLink(e,u){e.preventDefault();if(tg&&tg.openTelegramLink)tg.openTelegramLink(u);else window.open(u,'_blank')}
+function gate(me){nav.style.display='none';const v=$('v');v.innerHTML='';const b=h('div','gate');
+ if(!me.ok){b.append(h('h2','','Open from Telegram'),h('p','','Please open this app from the bot inside Telegram.'));v.append(b);return}
+ b.append(h('h2','','🔒 Join to play'),h('p','','Join our channel and group to unlock the games.'));
+ [['📢 Channel',me.channel],['👥 Group',me.group]].forEach(x=>{if(x[1]){const a=h('a','gbtn',x[0]);a.href=x[1];a.onclick=ev=>openLink(ev,x[1]);b.append(a)}});
+ const c=h('button','gbtn','✅ I joined');c.onclick=()=>{c.textContent='Checking...';boot()};b.append(c);v.append(b)}
+async function boot(){let me={ok:false};
+ try{me=await (await fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg?tg.initData:''})})).json()}catch(e){}
+ if(!me.ok||!me.joined){gate(me);return}
+ nav.style.display='flex';
+ try{games=await (await fetch('/api/games')).json();cur='overall';tab('home')}catch(e){$('v').append(h('div','empty','Connection failed'))}}
+boot();
 </script></body></html>
