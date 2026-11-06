@@ -20,12 +20,26 @@ PORT = int(env("PORT") or 8080)
 DB = env("DB_PATH") or ("/data/scores.db" if os.path.isdir("/data") else "scores.db")
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Join gate: set CHANNEL and GROUP as @username (or a numeric chat id for private ones).
-# For private chats also set CHANNEL_LINK / GROUP_LINK (invite links).
-CHANNEL = env("CHANNEL")
-GROUP = env("GROUP")
-CHANNEL_LINK = env("CHANNEL_LINK") or (f"https://t.me/{CHANNEL.lstrip('@')}" if CHANNEL.startswith("@") else "")
-GROUP_LINK = env("GROUP_LINK") or (f"https://t.me/{GROUP.lstrip('@')}" if GROUP.startswith("@") else "")
+# Join gate: set CHANNEL and GROUP in any of these forms: @username, username, https://t.me/username
+# (or a numeric chat id like -100123... for private ones, plus CHANNEL_LINK / GROUP_LINK invite links).
+def norm(v):
+    if not v:
+        return "", ""
+    if v.startswith("http"):
+        tail = v.split("t.me/")[-1].split("?")[0].strip("/")
+        if tail.startswith("+") or tail.startswith("joinchat"):
+            return "", v
+        return "@" + tail, v
+    if v.lstrip("-").isdigit():
+        return v, ""
+    name = v.lstrip("@")
+    return "@" + name, "https://t.me/" + name
+
+
+CHANNEL, _cl = norm(env("CHANNEL"))
+GROUP, _gl = norm(env("GROUP"))
+CHANNEL_LINK = env("CHANNEL_LINK") or _cl
+GROUP_LINK = env("GROUP_LINK") or _gl
 LOG_CHAT = env("LOG_CHAT_ID")
 if LOG_CHAT.lstrip("-").isdigit():
     LOG_CHAT = int(LOG_CHAT)
