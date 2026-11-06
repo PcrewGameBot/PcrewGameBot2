@@ -4,8 +4,8 @@ from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, MenuButtonWebApp
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = os.environ["BOT_TOKEN"]
-URL = os.environ.get("WEBAPP_URL", "").rstrip("/")
+TOKEN = os.environ["BOT_TOKEN"].strip()
+URL = os.environ.get("WEBAPP_URL", "").strip().rstrip("/")
 PORT = int(os.environ.get("PORT", 8080))
 DB = os.environ.get("DB_PATH", "/data/scores.db" if os.path.isdir("/data") else "scores.db")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +16,7 @@ GAMES = {
 }
 
 # DATABASE_URL ရှိရင် Postgres (ဘယ်တော့မှ မပျောက်), မရှိရင် SQLite သုံးမယ်
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 if DATABASE_URL:
     import psycopg2
 
