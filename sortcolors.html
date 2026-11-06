@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Sort the Colours</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:#06141f;--ink:#e9fbff;--dim:#8fb3c4;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0;background:radial-gradient(circle at 50% 0,#10405e,var(--bg) 70%);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#app{height:100%;display:flex;flex-direction:column;gap:10px;padding:10px;box-sizing:border-box;position:relative}
+#hud{display:flex;align-items:center;gap:8px;border:1px solid #1f6a8f;border-radius:14px;padding:6px 10px;background:#08202f}
+.st{flex:1;text-align:center;font-size:10px;color:var(--dim);font-weight:700}.st b{display:block;font-size:17px;color:var(--ink);font-weight:900}
+.ib{width:34px;height:34px;font-size:14px;padding:0}
+#board{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#grid{display:grid;grid-template-columns:repeat(4,1fr);gap:46px 14px;width:min(100%,380px);justify-items:center;padding-top:20px}
+.bot{position:relative;width:min(19vw,70px);aspect-ratio:1/2.5;border:3px solid #ffffff59;border-top:0;border-radius:6px 6px 30px 30px;background:linear-gradient(90deg,#ffffff1f,#ffffff08 45%,#ffffff14);box-shadow:inset 0 0 12px #ffffff22,0 8px 16px #0007;transition:transform .3s ease,box-shadow .2s;cursor:pointer}
+.bot::before{content:"";position:absolute;left:-7px;right:-7px;top:-5px;height:9px;border-radius:6px;background:linear-gradient(180deg,#ffffffaa,#ffffff44)}
+.bot::after{content:"";position:absolute;left:12%;top:8%;width:12%;height:62%;border-radius:8px;background:linear-gradient(180deg,#ffffff66,#ffffff00);pointer-events:none;z-index:2}
+.in{position:absolute;inset:0;overflow:hidden;border-radius:0 0 26px 26px;display:flex;flex-direction:column-reverse}
+.ly{height:25%;flex:none;background:linear-gradient(180deg,#ffffff4d,#ffffff00 45%),var(--c);box-shadow:inset 0 -1px 0 #0004}
+.ly.new{animation:grow .32s ease-out;transform-origin:bottom}
+@keyframes grow{from{transform:scaleY(.1);opacity:.5}}
+.bot.sel{transform:translateY(-18px);border-color:#c4f7ff;box-shadow:0 0 20px #7fe9ff,inset 0 0 12px #ffffff33}
+.bot.done{border-color:#4ade80;box-shadow:0 0 16px #4ade80aa,inset 0 0 12px #4ade8033}
+#bar{display:flex;gap:12px;justify-content:center;padding-bottom:6px}
+#toast{position:absolute;left:50%;top:76px;transform:translateX(-50%);background:#000b;padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:4}
+#ov{position:absolute;inset:0;background:rgba(6,20,31,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:22px;text-align:center;line-height:1.6;z-index:6}
+#ov h1{margin:0;font-size:30px;font-weight:900;color:#5ee7ff;text-shadow:0 0 16px #22d3ee}
+#ov p{margin:0;font-size:13px;color:var(--dim)}#ov .big{font-size:40px;font-weight:900}
+#ov .em{font-size:54px;animation:pp .6s ease-out}@keyframes pp{from{transform:scale(.3)}}
+.go{padding:13px 30px;font-size:15px}
+/* Glossy gradient pill buttons */
+.go,.ib{isolation:isolate;position:relative;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
+.go::before,.ib::before{content:"";position:absolute;z-index:-1;left:9%;right:9%;top:3px;height:44%;border-radius:999px;background:linear-gradient(180deg,#ffffffb3,#ffffff14);pointer-events:none}
+.go:active,.ib:active{transform:translateY(1px) scale(.97);filter:brightness(.92)}
+</style></head><body><div id="app">
+<div id="hud"><div class="st">LEVEL<b id="hl">1</b></div><div class="st">MOVES<b id="hm">0</b></div><div class="st">SCORE<b id="hs">0</b></div><button class="ib" id="bm">🔊</button></div>
+<div id="board"><div id="grid"></div></div>
+<div id="bar"><button class="go" id="bu">↩ Undo (3)</button><button class="go" id="br">🔄 Restart</button></div>
+<div id="toast"></div><div id="ov"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function h(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+const GAME='sortcolors',CAP=4,NB=8,COLS=['#ff4d6d','#ffa62b','#ffe14d','#3ddc84','#3d8bff','#b05cff'];
+const tg=window.Telegram&&Telegram.WebApp;
+if(tg){tg.ready();tg.expand();try{tg.disableVerticalSwipes()}catch(e){}tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='/'})}
+fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg?tg.initData:''})}).then(r=>r.json()).then(m=>{if(!m.ok||!m.joined)location.href='/'}).catch(()=>{});
+const esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+async function loadLb(){try{const r=await (await fetch('/api/leaderboard?game='+GAME)).json(),e=$('lb');if(e)e.innerHTML=r.slice(0,5).map((x,i)=>(i+1)+'. '+esc(x.name)+' - '+x.score).join('<br>')}catch(e){}}
+async function submit(){try{await fetch('/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:GAME,score:Math.floor(total),initData:tg?tg.initData:''})})}catch(e){}}
+const hap=()=>{try{tg&&tg.HapticFeedback&&tg.HapticFeedback.impactOccurred('light')}catch(e){}};
+let AC,muted=false;function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
+function tone(f,d,ty='sine',v=.06,sl=0,delay=0){if(muted)return;const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),n=a.currentTime+delay;o.type=ty;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+sl),n+d);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(a.destination);o.start(n);o.stop(n+d)}
+let save={level:1,score:0};try{save=Object.assign(save,JSON.parse(localStorage.getItem('sc_save')||'{}'))}catch(e){}
+const persist=lv=>{try{localStorage.setItem('sc_save',JSON.stringify({level:lv,score:Math.floor(total)}))}catch(e){}save={level:lv,score:Math.floor(total)}};
+let level=1,total=0,B=[],init='',sel=-1,moves=0,undos=3,hist=[],busy=false,mode='menu',nCol=3,newTop=null;
+const colorsFor=l=>Math.min(6,3+Math.floor((l-1)/2));
+const canPour=(a,b)=>a.length>0&&b.length<CAP&&(b.length===0||b[b.length-1]===a[a.length-1]);
+function pourAmt(a,b){const t=a[a.length-1];let n=0;for(let k=a.length-1;k>=0&&a[k]===t;k--)n++;return Math.min(n,CAP-b.length)}
+function apply(s,i,j){const r=s.map(b=>b.slice()),n=pourAmt(r[i],r[j]);for(let k=0;k<n;k++)r[j].push(r[i].pop());return r}
+const solved=s=>s.every(b=>b.length===0||(b.length===CAP&&b.every(x=>x===b[0])));
+function movesOf(s){const m=[];for(let i=0;i<NB;i++){const a=s[i];if(!a.length)continue;const uni=a.every(x=>x===a[0]);if(uni&&a.length===CAP)continue;
+ for(let j=0;j<NB;j++){if(i===j||!canPour(a,s[j]))continue;if(s[j].length===0&&uni)continue;m.push([i,j])}}return m}
+function solvable(s0){const seen=new Set(),st=[s0];let nodes=0;while(st.length){const s=st.pop();if(solved(s))return true;const k=s.map(b=>b.join('')).sort().join('|');if(seen.has(k))continue;seen.add(k);if(++nodes>30000)return true;for(const[i,j]of movesOf(s))st.push(apply(s,i,j))}return false}
+function gen(l){const n=colorsFor(l);let s,t=0;
+ do{const pool=[];for(let c=0;c<n;c++)for(let k=0;k<CAP;k++)pool.push(c);
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  s=Array.from({length:NB},(_,i)=>i<n?pool.slice(i*CAP,i*CAP+CAP):[]);
+  for(let i=NB-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[s[i],s[j]]=[s[j],s[i]]}
+ }while(++t<40&&(s.some(b=>b.length===CAP&&b.every(x=>x===b[0]))||!solvable(s)));
+ return s}
+function hud(){$('hl').textContent=level;$('hm').textContent=moves;$('hs').textContent=Math.floor(total);$('bu').textContent='↩ Undo ('+undos+')'}
+function render(){const g=$('grid');g.innerHTML='';
+ B.forEach((b,i)=>{const d=h('div','bot'+(sel===i?' sel':'')+(b.length===CAP&&b.every(x=>x===b[0])?' done':''));d.dataset.i=i;const inn=h('div','in');
+  b.forEach((c,k)=>{const l=h('i','ly'+(newTop&&newTop.j===i&&k>=b.length-newTop.n?' new':''));l.style.setProperty('--c',COLS[c]);inn.append(l)});d.append(inn);g.append(d)});newTop=null}
+function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>{e.style.opacity=0},2600)}
+function startLevel(l,keep){level=l;nCol=colorsFor(l);if(!keep){B=gen(l);init=JSON.stringify(B)}else B=JSON.parse(init);sel=-1;moves=0;undos=3;hist=[];busy=false;mode='play';$('ov').style.display='none';hud();render()}
+function pour(i,j){busy=true;const els=$('grid').children,a=els[i],ra=a.getBoundingClientRect(),rb=els[j].getBoundingClientRect(),dx=rb.left-ra.left,dy=rb.top-ra.top,dir=dx>=0?1:-1;
+ a.style.zIndex=5;a.style.transform='translate('+(dx-dir*30)+'px,'+(dy-50)+'px) rotate('+dir*40+'deg)';tone(340,.28,'sine',.05,-140);
+ setTimeout(()=>{hist.push(JSON.stringify(B));const n=pourAmt(B[i],B[j]);for(let k=0;k<n;k++)B[j].push(B[i].pop());moves++;sel=-1;newTop={j,n};render();busy=false;hud();hap();
+  if(solved(B))win();else if(!movesOf(B).length)toast('No useful moves left. Undo or restart.')},340)}
+function win(){mode='win';const bonus=Math.max(0,nCol*6-moves)*5,pts=100+level*20+bonus;total+=pts;persist(level+1);submit();
+ [523,659,784,1047].forEach((f,k)=>tone(f,.25,'triangle',.07,0,k*.12));
+ const o=$('ov');o.style.display='flex';o.innerHTML='<div class="em">🎉</div><h1>LEVEL '+level+' DONE</h1><div class="big">+'+pts+'</div><p>Moves '+moves+' · Bonus '+bonus+'</p><button class="go" id="go">NEXT LEVEL</button>';
+ $('go').onclick=()=>{ac();startLevel(level+1)}}
+function menu(){mode='menu';const o=$('ov');o.style.display='flex';
+ o.innerHTML='<h1>SORT THE<br>COLOURS</h1><p>Tap a bottle, then tap another to pour.<br>Fill every bottle with a single colour.</p><p>'+(save.level>1?'Level '+save.level+' · Score '+save.score:'8 bottles · endless levels')+'</p><p id="lb" style="font-size:12px"></p><button class="go" id="go">'+(save.level>1?'CONTINUE':'PLAY')+'</button>'+(save.level>1?'<button class="go" id="ng" style="filter:hue-rotate(150deg)">NEW GAME</button>':'');
+ loadLb();$('go').onclick=()=>{ac();total=save.score;startLevel(save.level)};
+ if($('ng'))$('ng').onclick=()=>{ac();total=0;persist(1);startLevel(1)}}
+$('grid').addEventListener('click',e=>{if(busy||mode!=='play')return;const d=e.target.closest('.bot');if(!d)return;const i=+d.dataset.i;ac();
+ if(sel<0){if(B[i].length){sel=i;tone(520,.07);render()}return}
+ if(sel===i){sel=-1;render();return}
+ if(canPour(B[sel],B[i]))pour(sel,i);else{tone(160,.12,'sawtooth',.05);sel=B[i].length?i:-1;render()}});
+$('bu').onclick=()=>{if(busy||mode!=='play'||!hist.length||undos<=0)return;B=JSON.parse(hist.pop());undos--;moves=Math.max(0,moves-1);sel=-1;render();hud();tone(440,.08)};
+$('br').onclick=()=>{if(busy||mode!=='play')return;startLevel(level,true);tone(300,.1)};
+$('bm').onclick=()=>{muted=!muted;$('bm').textContent=muted?'🔇':'🔊'};
+addEventListener('contextmenu',e=>e.preventDefault());
+hud();render();menu();
+</script></body></html>
