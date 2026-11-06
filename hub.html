@@ -56,11 +56,11 @@ function home(){const v=$('v');v.innerHTML='';
   if(t.tag)a.append(h('div','tag',t.tag));const cn=h('div','cn',g.title);if(t.sub)cn.append(h('small','',t.sub));a.append(cn);v.append(a)});
  v.append(h('div','soon','နောက်ထပ် ဂိမ်းတွေ မကြာခင် လာမယ်'))}
 async function board(){const v=$('v');v.innerHTML='';const chips=h('div','chips');
- games.forEach(g=>{const c=h('button','chip'+(g.id===cur?' on':''),g.emoji+' '+g.title);c.onclick=()=>{cur=g.id;board()};chips.append(c)});v.append(chips);
+ [{id:'overall',emoji:'🌟',title:'Overall XP'}].concat(games).forEach(g=>{const c=h('button','chip'+(g.id===cur?' on':''),g.emoji+' '+g.title);c.onclick=()=>{cur=g.id;board()};chips.append(c)});v.append(chips);
  const box=h('div','');v.append(box);let r=[];try{r=await (await fetch('/api/leaderboard?game='+cur)).json()}catch(e){}
  if(!r.length)box.append(h('div','empty','ရမှတ် မရှိသေးပါ၊ ပထမဆုံး ဖြစ်လိုက်ပါ'));
- r.forEach((x,i)=>{const row=h('div','row'+(x.name===nm?' me':''));row.append(h('span','rk',['🥇','🥈','🥉'][i]||String(i+1)),h('span','pn',x.name),h('span','sc',String(x.score)));box.append(row)})}
+ r.forEach((x,i)=>{const row=h('div','row'+(x.name===nm?' me':''));row.append(h('span','rk',['🥇','🥈','🥉'][i]||String(i+1)),h('span','pn',x.name),h('span','sc',x.score+(cur==='overall'?' XP':'')));box.append(row)})}
 function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='home'?home():board()}
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
-fetch('/api/games').then(r=>r.json()).then(g=>{games=g;cur=g[0]&&g[0].id;tab('home')}).catch(()=>{$('v').append(h('div','empty','ချိတ်ဆက်လို့မရပါ'))});
+fetch('/api/games').then(r=>r.json()).then(g=>{games=g;cur='overall';tab('home')}).catch(()=>{$('v').append(h('div','empty','ချိတ်ဆက်လို့မရပါ'))});
 </script></body></html>

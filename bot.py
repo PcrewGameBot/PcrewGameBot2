@@ -5,14 +5,17 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 TOKEN = os.environ["BOT_TOKEN"].strip()
-URL = os.environ.get("WEBAPP_URL", "").strip().rstrip("/")
+URL = "".join(os.environ.get("WEBAPP_URL", "").split()).rstrip("/")  # space တွေ အကုန်ဖယ်
+if URL and not URL.startswith("http"):
+    URL = "https://" + URL
 PORT = int(os.environ.get("PORT", 8080))
 DB = os.environ.get("DB_PATH", "/data/scores.db" if os.path.isdir("/data") else "scores.db")
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # ဂိမ်းအသစ်ထည့်ချင်ရင် ဖိုင်တင်ပြီး ဒီစာရင်းမှာ တစ်ကြောင်း ထပ်ထည့်ပါ
+# xp = ရမှတ် ၁ မှတ်ကို XP ဘယ်လောက်ပေးမလဲ (Overall Leaderboard အတွက်၊ 0.1 = ရမှတ် ၁၀၀ က XP ၁၀)
 GAMES = {
-    "thunderstorm": {"title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html"},
+    "thunderstorm": {"title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html", "xp": 0.1},
 }
 
 # DATABASE_URL ရှိရင် Postgres (ဘယ်တော့မှ မပျောက်), မရှိရင် SQLite သုံးမယ်
@@ -64,6 +67,18 @@ def top_rows(game, n=10):
     return q("SELECT name, score FROM scores WHERE game=? ORDER BY score DESC LIMIT ?", (game, n), True)
 
 
+def overall_rows(n=10):
+    """ဂိမ်းအားလုံးရဲ့ အမြင့်ဆုံးရမှတ်ကို XP ပြောင်းပြီး ပေါင်းတယ်"""
+    tot, names = {}, {}
+    for uid, name, game, score in q("SELECT uid, name, game, score FROM scores", (), True):
+        g = GAMES.get(game)
+        if not g:
+            continue
+        tot[uid] = tot.get(uid, 0) + int(score * g.get("xp", 0.1))
+        names[uid] = name
+    return sorted(((names[u], t) for u, t in tot.items()), key=lambda x: -x[1])[:n]
+
+
 async def hub(req):
     return web.FileResponse(os.path.join(HERE, "hub.html"))
 
@@ -80,7 +95,8 @@ async def api_games(req):
 
 
 async def api_top(req):
-    rows = top_rows(req.query.get("game", ""))
+    game = req.query.get("game", "")
+    rows = overall_rows() if game == "overall" else top_rows(game)
     return web.json_response([{"name": n, "score": s} for n, s in rows])
 
 
@@ -114,7 +130,9 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def top(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    parts = []
+    orows = overall_rows(5)
+    olines = [f"{i+1}. {n} - {s} XP" for i, (n, s) in enumerate(orows)] or ["မရှိသေးပါ"]
+    parts = ["🌟 Overall XP\n" + "\n".join(olines)]
     for k, v in GAMES.items():
         rows = top_rows(k, 5)
         lines = [f"{i+1}. {n} - {s}" for i, (n, s) in enumerate(rows)] or ["မရှိသေးပါ"]
