@@ -39,7 +39,7 @@ html,body{height:100%;margin:0;background:radial-gradient(circle at 50% 0,#10405
 <script>
 const $=id=>document.getElementById(id);
 function h(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
-const GAME='sortcolors',CAP=4,NB=8,COLS=['#ff4d6d','#ffa62b','#ffe14d','#3ddc84','#3d8bff','#b05cff'];
+const GAME='sortcolors',CAP=4,NB=8,COLS=['#ff4d6d','#ffa62b','#ffe14d','#3ddc84','#3d8bff','#b05cff','#ff8ad8'];
 const tg=window.Telegram&&Telegram.WebApp;
 if(tg){tg.ready();tg.expand();try{tg.disableVerticalSwipes()}catch(e){}tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='/'})}
 fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg?tg.initData:''})}).then(r=>r.json()).then(m=>{if(!m.ok||!m.joined)location.href='/'}).catch(()=>{});
@@ -52,14 +52,14 @@ function tone(f,d,ty='sine',v=.06,sl=0,delay=0){if(muted)return;const a=ac();if(
 let save={level:1,score:0};try{save=Object.assign(save,JSON.parse(localStorage.getItem('sc_save')||'{}'))}catch(e){}
 const persist=lv=>{try{localStorage.setItem('sc_save',JSON.stringify({level:lv,score:Math.floor(total)}))}catch(e){}save={level:lv,score:Math.floor(total)}};
 let level=1,total=0,B=[],init='',sel=-1,moves=0,undos=3,hist=[],busy=false,mode='menu',nCol=3,newTop=null;
-const colorsFor=l=>Math.min(6,3+Math.floor((l-1)/2));
+const colorsFor=l=>l>=9?7:Math.min(6,4+Math.floor((l-1)/2));
 const canPour=(a,b)=>a.length>0&&b.length<CAP&&(b.length===0||b[b.length-1]===a[a.length-1]);
 function pourAmt(a,b){const t=a[a.length-1];let n=0;for(let k=a.length-1;k>=0&&a[k]===t;k--)n++;return Math.min(n,CAP-b.length)}
 function apply(s,i,j){const r=s.map(b=>b.slice()),n=pourAmt(r[i],r[j]);for(let k=0;k<n;k++)r[j].push(r[i].pop());return r}
 const solved=s=>s.every(b=>b.length===0||(b.length===CAP&&b.every(x=>x===b[0])));
 function movesOf(s){const m=[];for(let i=0;i<NB;i++){const a=s[i];if(!a.length)continue;const uni=a.every(x=>x===a[0]);if(uni&&a.length===CAP)continue;
  for(let j=0;j<NB;j++){if(i===j||!canPour(a,s[j]))continue;if(s[j].length===0&&uni)continue;m.push([i,j])}}return m}
-function solvable(s0){const seen=new Set(),st=[s0];let nodes=0;while(st.length){const s=st.pop();if(solved(s))return true;const k=s.map(b=>b.join('')).sort().join('|');if(seen.has(k))continue;seen.add(k);if(++nodes>30000)return true;for(const[i,j]of movesOf(s))st.push(apply(s,i,j))}return false}
+function solvable(s0){const seen=new Set(),st=[s0];let nodes=0;while(st.length){const s=st.pop();if(solved(s))return true;const k=s.map(b=>b.join('')).sort().join('|');if(seen.has(k))continue;seen.add(k);if(++nodes>60000)return true;for(const[i,j]of movesOf(s))st.push(apply(s,i,j))}return false}
 function gen(l){const n=colorsFor(l);let s,t=0;
  do{const pool=[];for(let c=0;c<n;c++)for(let k=0;k<CAP;k++)pool.push(c);
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
@@ -72,7 +72,7 @@ function render(){const g=$('grid');g.innerHTML='';
  B.forEach((b,i)=>{const d=h('div','bot'+(sel===i?' sel':'')+(b.length===CAP&&b.every(x=>x===b[0])?' done':''));d.dataset.i=i;const inn=h('div','in');
   b.forEach((c,k)=>{const l=h('i','ly'+(newTop&&newTop.j===i&&k>=b.length-newTop.n?' new':''));l.style.setProperty('--c',COLS[c]);inn.append(l)});d.append(inn);g.append(d)});newTop=null}
 function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>{e.style.opacity=0},2600)}
-function startLevel(l,keep){level=l;nCol=colorsFor(l);if(!keep){B=gen(l);init=JSON.stringify(B)}else B=JSON.parse(init);sel=-1;moves=0;undos=3;hist=[];busy=false;mode='play';$('ov').style.display='none';hud();render()}
+function startLevel(l,keep){level=l;nCol=colorsFor(l);if(!keep){B=gen(l);init=JSON.stringify(B)}else B=JSON.parse(init);sel=-1;moves=0;undos=l<4?3:2;hist=[];busy=false;mode='play';$('ov').style.display='none';hud();render()}
 function pour(i,j){busy=true;const els=$('grid').children,a=els[i],ra=a.getBoundingClientRect(),rb=els[j].getBoundingClientRect(),dx=rb.left-ra.left,dy=rb.top-ra.top,dir=dx>=0?1:-1;
  a.style.zIndex=5;a.style.transform='translate('+(dx-dir*30)+'px,'+(dy-50)+'px) rotate('+dir*40+'deg)';tone(340,.28,'sine',.05,-140);
  setTimeout(()=>{hist.push(JSON.stringify(B));const n=pourAmt(B[i],B[j]);for(let k=0;k<n;k++)B[j].push(B[i].pop());moves++;sel=-1;newTop={j,n};render();busy=false;hud();hap();
