@@ -65,6 +65,15 @@ nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc
 .sd{position:absolute;width:6px;height:6px;border-radius:50%;background:#3b82f6;box-shadow:0 0 6px #60a5fa;animation:up 1.1s linear infinite}
 .s1{right:150px;top:112px}.s2{right:134px;top:112px;animation-delay:-.4s}.s3{right:166px;top:112px;animation-delay:-.8s}
 @keyframes up{from{transform:translateY(20px);opacity:1}to{transform:translateY(-70px);opacity:0}}
+
+.road{position:absolute;right:0;top:0;bottom:0;width:160px;background:linear-gradient(180deg,#fff 50%,transparent 50%) center top/5px 34px repeat-y,linear-gradient(90deg,#222733,#3a4154);animation:rdm .5s linear infinite;opacity:.9}
+@keyframes rdm{to{background-position:center 34px,0 0}}
+.cr{position:absolute;font-size:46px;transform:rotate(90deg);animation:fl 2s ease-in-out infinite}
+.c1{right:100px;top:14px}.c2{right:38px;top:56px;animation-delay:-1s}
+.gl{position:absolute;right:26px;top:8px;font-size:86px;animation:fl 3.4s ease-in-out infinite}
+.bl{position:absolute;right:92px;top:92px;font-size:30px;animation:bk 1.4s ease-in infinite}
+@keyframes bk{from{transform:translate(0,0) scale(1);opacity:1}to{transform:translate(18px,-62px) scale(.5);opacity:.2}}
+.kp{position:absolute;right:62px;top:46px;font-size:34px;animation:fl 1.6s ease-in-out infinite}
 /* Glossy gradient pill buttons */
 .pill,.gbtn,.chip.on,nav button.on,.go,.cb,.ib{isolation:isolate;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;letter-spacing:.5px;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
 .gbtn,.chip,nav button,.go,.cb,.ib{position:relative}
@@ -117,6 +126,10 @@ TH.timberchop={bg:'linear-gradient(135deg,#0f3d22,#15803d 55%,#86efac)',tag:'NEW
 art:'<span class="tr tr1">🌲</span><span class="tr tr2">🌲</span><span class="ax">🪓</span><i class="wc w1"></i><i class="wc w2"></i><i class="wc w3"></i>'};
 TH.crowdcannon={bg:'linear-gradient(135deg,#3a2a1c,#b4783c 55%,#fcd34d)',tag:'HOT',sub:'Multiply your army',desc:'Multiply your army and stop the red crowd.',
 art:'<i class="rblob"></i><span class="gt">×99</span><i class="sd s1"></i><i class="sd s2"></i><i class="sd s3"></i>'};
+TH.trafficracer={bg:'linear-gradient(135deg,#1b2233,#3b4254 55%,#f59e0b)',tag:'NEW',sub:'Dodge traffic. Go fast.',desc:'Weave through traffic, grab coins and chase near-miss bonuses.',
+art:'<i class="road"></i><span class="cr c1">🚗</span><span class="cr c2">🏎️</span>'};
+TH.penalty={bg:'linear-gradient(135deg,#0d3b22,#16803c 55%,#86efac)',tag:'NEW',sub:'Beat the keeper.',desc:'Aim your shot, beat the keeper and build a scoring streak.',
+art:'<span class="gl">🥅</span><span class="bl">⚽</span><span class="kp">🧤</span>'};
 const FB=['linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#6d28d9,#a855f7)','linear-gradient(135deg,#047857,#34d399)','linear-gradient(135deg,#be123c,#fb7185)'];
 let games=[],ME={};
 function mkAv(){const a=h('div','av');const ini=()=>{a.textContent=nm[0].toUpperCase()};if(U.photo_url){const i=new Image();i.src=U.photo_url;i.onerror=()=>{i.remove();ini()};a.appendChild(i)}else ini();return a}
