@@ -30,6 +30,16 @@ html,body{height:100%;margin:0;background:radial-gradient(circle at 50% 0,#10405
 .go,.ib{isolation:isolate;position:relative;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
 .go::before,.ib::before{content:"";position:absolute;z-index:-1;left:9%;right:9%;top:3px;height:44%;border-radius:999px;background:linear-gradient(180deg,#ffffffb3,#ffffff14);pointer-events:none}
 .go:active,.ib:active{transform:translateY(1px) scale(.97);filter:brightness(.92)}
+
+/* Ranking button + panel */
+.go.rk{background:linear-gradient(180deg,#c084fc 0%,#7e22ce 52%,#581c87 100%);border-color:#e9d5ff;padding:10px 30px;font-size:14px;margin-top:0}
+#rkm{position:fixed;inset:0;background:rgba(5,3,20,.78);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px}
+.rkc{width:min(100%,360px);max-height:80%;overflow:auto;background:linear-gradient(180deg,#2a1670,#0f0a3a);border:1px solid #ffffff2e;border-radius:26px;padding:18px;box-shadow:0 20px 50px #000a;text-align:center;color:#fff;font-family:system-ui,sans-serif}
+.rkc h2{margin:0 0 12px;font-size:24px;font-weight:900}
+.rkl{text-align:left;margin-bottom:14px;color:#cfc9f7;font-size:14px}
+.rkr{display:flex;gap:10px;align-items:center;background:#ffffff14;border-radius:14px;padding:10px 12px;margin-bottom:8px;color:#fff}
+.rkr span:first-child{width:30px;text-align:center;font-weight:900}.rkr span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.rkr span:last-child{font-weight:900;color:#ffd84d}
+.rkr.me{outline:2px solid #a78bfa;background:#a78bfa33}
 </style></head><body><div id="app">
 <div id="hud"><div class="st">LEVEL<b id="hl">1</b></div><div class="st">MOVES<b id="hm">0</b></div><div class="st">SCORE<b id="hs">0</b></div><button class="ib" id="bm">🔊</button></div>
 <div id="board"><div id="grid"></div></div>
@@ -82,7 +92,7 @@ function win(){mode='win';const bonus=Math.max(0,nCol*6-moves)*5,pts=100+level*2
  const o=$('ov');o.style.display='flex';o.innerHTML='<div class="em">🎉</div><h1>LEVEL '+level+' DONE</h1><div class="big">+'+pts+'</div><p>Moves '+moves+' · Bonus '+bonus+'</p><button class="go" id="go">NEXT LEVEL</button>';
  $('go').onclick=()=>{ac();startLevel(level+1)}}
 function menu(){mode='menu';const o=$('ov');o.style.display='flex';
- o.innerHTML='<h1>SORT THE<br>COLOURS</h1><p>Tap a bottle, then tap another to pour.<br>Fill every bottle with a single colour.</p><p>'+(save.level>1?'Level '+save.level+' · Score '+save.score:'8 bottles · endless levels')+'</p><p id="lb" style="font-size:12px"></p><button class="go" id="go">'+(save.level>1?'CONTINUE':'PLAY')+'</button>'+(save.level>1?'<button class="go" id="ng" style="filter:hue-rotate(150deg)">NEW GAME</button>':'');
+ o.innerHTML='<h1>SORT THE<br>COLOURS</h1><p>Tap a bottle, then tap another to pour.<br>Fill every bottle with a single colour.</p><p>'+(save.level>1?'Level '+save.level+' · Score '+save.score:'8 bottles · endless levels')+'</p><button class="go" id="go">'+(save.level>1?'CONTINUE':'PLAY')+'</button><button class="go rk" id="rk">🏆 Ranking</button>'+(save.level>1?'<button class="go" id="ng" style="filter:hue-rotate(150deg)">NEW GAME</button>':'');
  loadLb();$('go').onclick=()=>{ac();total=save.score;startLevel(save.level)};
  if($('ng'))$('ng').onclick=()=>{ac();total=0;persist(1);startLevel(1)}}
 $('grid').addEventListener('click',e=>{if(busy||mode!=='play')return;const d=e.target.closest('.bot');if(!d)return;const i=+d.dataset.i;ac();
@@ -94,4 +104,10 @@ $('br').onclick=()=>{if(busy||mode!=='play')return;startLevel(level,true);tone(3
 $('bm').onclick=()=>{muted=!muted;$('bm').textContent=muted?'🔇':'🔊'};
 addEventListener('contextmenu',e=>e.preventDefault());
 hud();render();menu();
+
+function openRank(){if($('rkm'))return;const m=document.createElement('div');m.id='rkm';const c=document.createElement('div');c.className='rkc';const t=document.createElement('h2');t.textContent='🏆 Ranking';const l=document.createElement('div');l.className='rkl';l.textContent='Loading...';const b=document.createElement('button');b.className='go';b.textContent='Close';c.append(t,l,b);m.append(c);document.body.append(m);b.onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove()};
+ const me=((tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||{}).first_name||'';
+ fetch('/api/leaderboard?game=sortcolors').then(r=>r.json()).then(r=>{l.textContent='';if(!r.length){l.textContent='No scores yet. Be the first!';return}
+  r.forEach((x,i)=>{const d=document.createElement('div');d.className='rkr'+(x.name===me.slice(0,20)?' me':'');const a=document.createElement('span');a.textContent=['🥇','🥈','🥉'][i]||String(i+1);const n=document.createElement('span');n.textContent=x.name;const s=document.createElement('span');s.textContent=x.score;d.append(a,n,s);l.append(d)})}).catch(()=>{l.textContent='Could not load ranking'})}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#rk'))openRank()});
 </script></body></html>

@@ -141,8 +141,8 @@ def top_rows(game, n=10):
     return q("SELECT name, score FROM scores WHERE game=? ORDER BY score DESC LIMIT ?", (game, n), True)
 
 
-def overall_rows(n=10):
-    """Best score of every game, converted to XP and added together."""
+def overall_all():
+    """Best score of every game, converted to XP and added together. Returns [(uid, name, xp)] sorted."""
     tot, names = {}, {}
     for uid, name, game, score in q("SELECT uid, name, game, score FROM scores", (), True):
         g = GAMES.get(game)
@@ -150,7 +150,18 @@ def overall_rows(n=10):
             continue
         tot[uid] = tot.get(uid, 0) + int(score * g.get("xp", 0.1))
         names[uid] = name
-    return sorted(((names[u], t) for u, t in tot.items()), key=lambda x: -x[1])[:n]
+    return sorted(((u, names[u], t) for u, t in tot.items()), key=lambda x: -x[2])
+
+
+def overall_rows(n=10):
+    return [(name, xp) for _, name, xp in overall_all()[:n]]
+
+
+def my_overall(uid):
+    for i, (u, _, xp) in enumerate(overall_all()):
+        if u == uid:
+            return xp, i + 1
+    return 0, None
 
 
 async def hub(req):
@@ -176,8 +187,10 @@ async def api_me(req):
     u = verify(b.get("initData", ""))
     if not u:
         return web.json_response({"ok": False})
-    return web.json_response({"ok": True, "joined": await joined(u["id"]),
-                              "channel": CHANNEL_LINK, "group": GROUP_LINK})
+    ok = await joined(u["id"])
+    xp, rank = my_overall(u["id"]) if ok else (0, None)
+    return web.json_response({"ok": True, "joined": ok, "channel": CHANNEL_LINK, "group": GROUP_LINK,
+                              "xp": xp, "rank": rank})
 
 
 async def api_top(req):

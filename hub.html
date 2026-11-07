@@ -70,43 +70,74 @@ nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc
 .gbtn,.chip,nav button,.go,.cb,.ib{position:relative}
 .pill::before,.gbtn::before,.chip.on::before,nav button.on::before,.go::before,.cb::before,.ib::before{content:"";position:absolute;z-index:-1;left:9%;right:9%;top:3px;height:44%;border-radius:999px;background:linear-gradient(180deg,#ffffffb3,#ffffff14);pointer-events:none}
 .pill:active,.gbtn:active,.chip.on:active,nav button.on:active,.go:active,.cb:active,.ib:active{transform:translateY(1px) scale(.97);filter:brightness(.92)}
+
+/* Gamee-style layout */
+body{background:linear-gradient(180deg,#4b1d8f 0,#2a1275 22%,#120d52 55%,#07072e 100%) fixed;padding:16px 16px calc(112px + env(safe-area-inset-bottom))}
+.prof{display:flex;align-items:center;gap:12px;margin:2px 0 14px}
+.prof .av{width:52px;height:52px;border:3px solid #8f7bff;box-shadow:0 0 0 2px #3a2a8a}
+.pn2{flex:1;min-width:0}.pn2 b{display:block;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pn2 small{color:#b8b3e8;font-size:13px}
+.sp{display:flex;align-items:center;gap:6px;background:#0f0c33cc;border:1px solid #ffffff22;border-radius:999px;padding:7px 13px;font-weight:800;font-size:15px;white-space:nowrap}
+.hd{display:flex;align-items:baseline;justify-content:space-between;margin:20px 0 6px}.hd h1{margin:0;font-size:30px;font-weight:900;letter-spacing:.3px;text-transform:uppercase}.hd span{color:#c4bdf5;font-size:15px}
+.sb{color:#cfc9f7;font-size:15px;margin:0 0 12px;line-height:1.4}
+.gr{display:flex;align-items:center;gap:14px;padding:10px 2px;color:inherit;text-decoration:none}
+.ico{width:72px;height:72px;border-radius:18px;flex:none;display:grid;place-items:center;font-size:38px;box-shadow:inset 0 0 0 2px #ffffff30,0 6px 14px #0006;overflow:hidden;position:relative}
+.ico span{position:relative;z-index:1;animation:fl 3s ease-in-out infinite;filter:drop-shadow(0 3px 4px #0006)}
+.ico::after{content:"";position:absolute;inset:0;background:linear-gradient(160deg,#ffffff4d,#ffffff00 48%)}
+.rm{flex:1;min-width:0}.rt{font-size:20px;font-weight:800;line-height:1.15}.rd{color:#c4bdf5;font-size:14px;line-height:1.3;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rp{position:relative;padding:12px 22px;font-size:17px;flex:none}
+.mc{background:#ffffff14;border:1px solid #ffffff22;border-radius:26px;padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.mc .av{width:46px;height:46px}
+.lr{display:flex;align-items:center;gap:12px;background:#ffffff12;border:1px solid #ffffff1c;border-radius:20px;padding:12px 14px;margin-bottom:10px}
+.lr.me{outline:2px solid #8f7bff;background:#8f7bff2a}
+.lk{width:34px;text-align:center;font-weight:900;font-size:20px}
+.la{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c6cff,#2ec8ff);display:grid;place-items:center;font-weight:900;flex:none}
+.ln{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lx{font-weight:900;color:#ffd84d;white-space:nowrap}
+#nv{z-index:50;left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom));border:1px solid #ffffff1f;border-radius:34px;background:rgba(18,16,34,.92);padding:10px 14px 12px;gap:6px;justify-content:space-around;box-shadow:0 10px 30px #000a}
+#nv button,#nv button.on{flex:1;max-width:none;background:none;border:0;box-shadow:none;border-radius:20px;color:#b9b4d8;font:700 13px system-ui,sans-serif;letter-spacing:.5px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0}
+#nv button i{font-size:32px;filter:drop-shadow(0 3px 4px #0008);transition:transform .15s}
+#nv button.on{color:#fff;font-weight:900}#nv button.on i{transform:translateY(-3px) scale(1.12)}
+#nv button.on::before{display:none}
+#nv button.on::after{content:"";width:16px;height:4px;border-radius:3px;background:#ffd84d;position:absolute;bottom:-3px}
 </style></head><body>
-<div class="top"><div class="av" id="av"></div><div><small>Hello</small><b id="nm"></b></div></div>
 <div id="v"></div>
-<nav><button data-t="home" class="on"><i>🏠</i>Home</button><button data-t="lb"><i>🏆</i>Leaderboard</button></nav>
+<nav id="nv"><button data-t="home" class="on"><i>🎮</i>GAMES</button><button data-t="lb"><i>🏆</i>BOARD</button></nav>
 <script>
 const tg=window.Telegram&&Telegram.WebApp,U=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||{};
-if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#0a0e1f');tg.setBackgroundColor('#0a0e1f')}catch(e){}tg.BackButton.hide()}
+if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#1b0f5c');tg.setBackgroundColor('#0a0a3f')}catch(e){}tg.BackButton.hide()}
 const $=id=>document.getElementById(id),nm=U.first_name||'Player';
 function h(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
-$('nm').textContent=nm;const av=$('av'),ini=()=>{av.textContent=nm[0].toUpperCase()};
-if(U.photo_url){const i=new Image();i.src=U.photo_url;i.onerror=ini;av.appendChild(i)}else ini();
 /* New game: add its look here (without an entry it gets an automatic color) */
-const TH={thunderstorm:{bg:'linear-gradient(135deg,#0b1d4a,#1d4ed8 55%,#38bdf8)',tag:'HOT',sub:'Dodge the storm',
+const TH={thunderstorm:{bg:'linear-gradient(135deg,#0b1d4a,#1d4ed8 55%,#38bdf8)',tag:'HOT',sub:'Dodge the storm',desc:'Dodge the lightning and survive the storm.',
 art:'<i class="rain"></i><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><svg class="bolt" viewBox="0 0 60 100"><path d="M40 0 6 56h22L16 100 54 38H33z" fill="#fff"/></svg>'}};
-TH.spaceshooter={bg:'linear-gradient(135deg,#1b0b45,#6d28d9 55%,#d946ef)',tag:'NEW',sub:'Blast the invaders',
+TH.spaceshooter={bg:'linear-gradient(135deg,#1b0b45,#6d28d9 55%,#d946ef)',tag:'NEW',sub:'Blast the invaders',desc:'Blast alien invaders and defeat the boss.',
 art:'<i class="stars"></i><i class="planet"></i><i class="beam b1"></i><i class="beam b2"></i><span class="ship">🚀</span><span class="ufo">👾</span>'};
-TH.sortcolors={bg:'linear-gradient(135deg,#053b4d,#0e7490 55%,#22d3ee)',tag:'PUZZLE',sub:'Pour. Match. Relax.',
+TH.sortcolors={bg:'linear-gradient(135deg,#053b4d,#0e7490 55%,#22d3ee)',tag:'PUZZLE',sub:'Pour. Match. Relax.',desc:'Pour and sort the colours. Endless puzzle levels.',
 art:'<span class="bt t1"><i style="background:#ff4d6d"></i><i style="background:#ffe14d"></i><i style="background:#3d8bff"></i></span><span class="bt t2"><i style="background:#3ddc84"></i><i style="background:#b05cff"></i><i style="background:#ffa62b"></i></span><span class="bt t3"><i style="background:#3d8bff"></i><i style="background:#ff4d6d"></i><i style="background:#3ddc84"></i></span>'};
-TH.timberchop={bg:'linear-gradient(135deg,#0f3d22,#15803d 55%,#86efac)',tag:'NEW',sub:'Chop fast. Dodge branches.',
+TH.timberchop={bg:'linear-gradient(135deg,#0f3d22,#15803d 55%,#86efac)',tag:'NEW',sub:'Chop fast. Dodge branches.',desc:'Chop fast, dodge branches and beat the clock.',
 art:'<span class="tr tr1">🌲</span><span class="tr tr2">🌲</span><span class="ax">🪓</span><i class="wc w1"></i><i class="wc w2"></i><i class="wc w3"></i>'};
-TH.crowdcannon={bg:'linear-gradient(135deg,#3a2a1c,#b4783c 55%,#fcd34d)',tag:'HOT',sub:'Multiply your army',
+TH.crowdcannon={bg:'linear-gradient(135deg,#3a2a1c,#b4783c 55%,#fcd34d)',tag:'HOT',sub:'Multiply your army',desc:'Multiply your army and stop the red crowd.',
 art:'<i class="rblob"></i><span class="gt">×99</span><i class="sd s1"></i><i class="sd s2"></i><i class="sd s3"></i>'};
 const FB=['linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#6d28d9,#a855f7)','linear-gradient(135deg,#047857,#34d399)','linear-gradient(135deg,#be123c,#fb7185)'];
-let games=[],cur=null;
-function home(){const v=$('v');v.innerHTML='';
- games.forEach((g,i)=>{const t=TH[g.id]||{},a=h('a','card');a.href='/g/'+g.id;a.style.background=t.bg||FB[i%FB.length];
-  const art=h('div','art');if(t.art)art.innerHTML=t.art;else art.append(h('div','em',g.emoji));a.append(art);a.append(h('div','play pill','PLAY'));
-  if(t.tag)a.append(h('div','tag',t.tag));const cn=h('div','cn',g.title);if(t.sub)cn.append(h('small','',t.sub));a.append(cn);v.append(a)});
- v.append(h('div','soon','More games coming soon'))}
-async function board(){const v=$('v');v.innerHTML='';const chips=h('div','chips');
- [{id:'overall',emoji:'🌟',title:'Overall XP'}].concat(games).forEach(g=>{const c=h('button','chip'+(g.id===cur?' on':''),g.emoji+' '+g.title);c.onclick=()=>{cur=g.id;board()};chips.append(c)});v.append(chips);
- const box=h('div','');v.append(box);let r=[];try{r=await (await fetch('/api/leaderboard?game='+cur)).json()}catch(e){}
+let games=[],ME={};
+function mkAv(){const a=h('div','av');const ini=()=>{a.textContent=nm[0].toUpperCase()};if(U.photo_url){const i=new Image();i.src=U.photo_url;i.onerror=()=>{i.remove();ini()};a.appendChild(i)}else ini();return a}
+function hd(t,r){const d=h('div','hd');d.append(h('h1','',t));if(r)d.append(h('span','',r));return d}
+function prof(){const p=h('div','prof');p.append(mkAv());const m=h('div','pn2');m.append(h('b','',nm));if(U.username)m.append(h('small','','@'+U.username));p.append(m);if(ME.xp!=null)p.append(h('div','sp','🌟 '+ME.xp+' XP'));return p}
+function gr(g,i){const t=TH[g.id]||{},a=h('a','gr');a.href='/g/'+g.id;const ico=h('div','ico');ico.style.background=t.bg||FB[i%FB.length];ico.append(h('span','',g.emoji));a.append(ico);
+ const m=h('div','rm');m.append(h('div','rt',g.title),h('div','rd',t.desc||t.sub||''));a.append(m,h('div','pill rp','PLAY'));return a}
+function home(){const v=$('v');v.innerHTML='';v.append(prof());
+ if(games.length){const f=games[games.length-1],t=TH[f.id]||{};v.append(hd('Featured'));const a=h('a','card');a.href='/g/'+f.id;a.style.background=t.bg||FB[0];
+  const art=h('div','art');if(t.art)art.innerHTML=t.art;else art.append(h('div','em',f.emoji));a.append(art,h('div','play pill','PLAY'));if(t.tag)a.append(h('div','tag',t.tag));
+  const cn=h('div','cn',f.title);if(t.sub)cn.append(h('small','',t.sub));a.append(cn);v.append(a)}
+ v.append(hd('All games',games.length+' games'),h('p','sb','Pick a game, beat your best score and climb the ranking.'));
+ games.slice().reverse().forEach((g,i)=>v.append(gr(g,i)));v.append(h('div','soon','More games coming soon'))}
+async function board(){const v=$('v');v.innerHTML='';v.append(hd('Leaderboard'),h('p','sb','Overall ranking. Open a game to see its top players.'));
+ const mc=h('div','mc');mc.append(mkAv());const m=h('div','pn2');m.append(h('b','','Your rank'),h('small','',ME.xp!=null?ME.xp+' XP':'-'));mc.append(m,h('div','sp',ME.rank?'#'+ME.rank:'-'));v.append(mc);
+ const box=h('div','');v.append(box);let r=[];try{r=await (await fetch('/api/leaderboard?game=overall')).json()}catch(e){}
  if(!r.length)box.append(h('div','empty','No scores yet. Be the first!'));
- r.forEach((x,i)=>{const row=h('div','row'+(x.name===nm?' me':''));row.append(h('span','rk',['🥇','🥈','🥉'][i]||String(i+1)),h('span','pn',x.name),h('span','sc',x.score+(cur==='overall'?' XP':'')));box.append(row)})}
-function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='home'?home():board()}
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
-const nav=document.querySelector('nav');
+ r.forEach((x,i)=>{const row=h('div','lr'+(x.name===nm.slice(0,20)?' me':''));row.append(h('span','lk',['🥇','🥈','🥉'][i]||String(i+1)),h('span','la',(x.name||'?')[0].toUpperCase()),h('span','ln',x.name),h('span','lx',x.score+' XP'));box.append(row)})}
+function tab(t){document.querySelectorAll('#nv button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='home'?home():board()}
+document.querySelectorAll('#nv button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+const nav=$('nv');
 function openLink(e,u){e.preventDefault();if(tg&&tg.openTelegramLink)tg.openTelegramLink(u);else window.open(u,'_blank')}
 function gate(me){nav.style.display='none';const v=$('v');v.innerHTML='';const b=h('div','gate');
  if(!me.ok){b.append(h('h2','','Open from Telegram'),h('p','','Please open this app from the bot inside Telegram.'));v.append(b);return}
@@ -116,7 +147,7 @@ function gate(me){nav.style.display='none';const v=$('v');v.innerHTML='';const b
 async function boot(){let me={ok:false};
  try{me=await (await fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg?tg.initData:''})})).json()}catch(e){}
  if(!me.ok||!me.joined){gate(me);return}
- nav.style.display='flex';
- try{games=await (await fetch('/api/games')).json();cur='overall';tab('home')}catch(e){$('v').append(h('div','empty','Connection failed'))}}
+ ME=me;nav.style.display='flex';
+ try{games=await (await fetch('/api/games')).json();tab('home')}catch(e){$('v').append(h('div','empty','Connection failed'))}}
 boot();
 </script></body></html>
