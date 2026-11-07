@@ -65,6 +65,7 @@ GAMES = {
     "crowdcannon": {"title": "Crowd Cannon", "emoji": "💣", "file": "crowdcannon.html", "xp": 0.05},
     "trafficracer": {"title": "Traffic Racer", "emoji": "🏎️", "file": "trafficracer.html", "xp": 0.05},
     "penalty": {"title": "Penalty Shootout", "emoji": "⚽", "file": "penalty.html", "xp": 4},
+    "leveldevil": {"title": "Level Devil", "emoji": "😈", "file": "leveldevil.html", "xp": 3},
 }
 
 # DATABASE_URL set = Postgres (data is never lost), otherwise SQLite
