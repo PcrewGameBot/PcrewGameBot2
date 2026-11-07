@@ -61,6 +61,7 @@ GAMES = {
     "thunderstorm": {"title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html", "xp": 0.1},
     "spaceshooter": {"title": "Space Shooter", "emoji": "🚀", "file": "spaceshooter.html", "xp": 0.05},
     "sortcolors": {"title": "Sort the Colours", "emoji": "🧪", "file": "sortcolors.html", "xp": 0.05},
+    "timberchop": {"title": "Timber Chop", "emoji": "🪓", "file": "timberchop.html", "xp": 0.5},
 }
 
 # DATABASE_URL set = Postgres (data is never lost), otherwise SQLite

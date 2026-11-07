@@ -50,6 +50,15 @@ nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc
 
 .bt{position:absolute;bottom:62px;width:30px;height:78px;border:3px solid #ffffff99;border-top:0;border-radius:4px 4px 15px 15px;display:flex;flex-direction:column-reverse;overflow:hidden;background:#ffffff22;animation:fl 3s ease-in-out infinite}
 .bt i{flex:1}.t1{right:22px}.t2{right:66px;animation-delay:-1s}.t3{right:110px;animation-delay:-2s}
+
+.tr{position:absolute;animation:sw 4s ease-in-out infinite;transform-origin:bottom}
+.tr1{right:70px;top:-6px;font-size:92px}.tr2{right:16px;top:34px;font-size:60px;animation-delay:-1.5s}
+@keyframes sw{50%{transform:rotate(3deg)}}
+.ax{position:absolute;right:112px;top:56px;font-size:46px;transform-origin:80% 80%;animation:ch .7s ease-in-out infinite}
+@keyframes ch{0%,100%{transform:rotate(-35deg)}50%{transform:rotate(15deg)}}
+.wc{position:absolute;width:7px;height:7px;background:#d9a066;border-radius:1px;animation:wcf 1.4s ease-out infinite}
+.w1{right:104px;top:82px}.w2{right:92px;top:90px;animation-delay:-.5s;background:#b87a3d}.w3{right:112px;top:96px;animation-delay:-.9s}
+@keyframes wcf{from{transform:translate(0,0);opacity:1}to{transform:translate(-34px,-26px) rotate(160deg);opacity:0}}
 /* Glossy gradient pill buttons */
 .pill,.gbtn,.chip.on,nav button.on,.go,.cb,.ib{isolation:isolate;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;letter-spacing:.5px;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
 .gbtn,.chip,nav button,.go,.cb,.ib{position:relative}
@@ -73,6 +82,8 @@ TH.spaceshooter={bg:'linear-gradient(135deg,#1b0b45,#6d28d9 55%,#d946ef)',tag:'N
 art:'<i class="stars"></i><i class="planet"></i><i class="beam b1"></i><i class="beam b2"></i><span class="ship">🚀</span><span class="ufo">👾</span>'};
 TH.sortcolors={bg:'linear-gradient(135deg,#053b4d,#0e7490 55%,#22d3ee)',tag:'PUZZLE',sub:'Pour. Match. Relax.',
 art:'<span class="bt t1"><i style="background:#ff4d6d"></i><i style="background:#ffe14d"></i><i style="background:#3d8bff"></i></span><span class="bt t2"><i style="background:#3ddc84"></i><i style="background:#b05cff"></i><i style="background:#ffa62b"></i></span><span class="bt t3"><i style="background:#3d8bff"></i><i style="background:#ff4d6d"></i><i style="background:#3ddc84"></i></span>'};
+TH.timberchop={bg:'linear-gradient(135deg,#0f3d22,#15803d 55%,#86efac)',tag:'NEW',sub:'Chop fast. Dodge branches.',
+art:'<span class="tr tr1">🌲</span><span class="tr tr2">🌲</span><span class="ax">🪓</span><i class="wc w1"></i><i class="wc w2"></i><i class="wc w3"></i>'};
 const FB=['linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#6d28d9,#a855f7)','linear-gradient(135deg,#047857,#34d399)','linear-gradient(135deg,#be123c,#fb7185)'];
 let games=[],cur=null;
 function home(){const v=$('v');v.innerHTML='';
