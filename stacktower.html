@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Stack Tower</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--ink:#f4f7ff;--dim:#b4bfd8;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0;background:#0d1020;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#app{height:100%;display:flex;flex-direction:column;gap:6px;padding:8px;box-sizing:border-box}
+#hud{display:flex;align-items:center;gap:8px;border:1px solid #4a5aa0;border-radius:14px;padding:6px 10px;background:#151a33}
+.st{flex:1;text-align:center;font-size:10px;color:var(--dim);font-weight:700}.st b{display:block;font-size:17px;color:var(--ink);font-weight:900;white-space:nowrap}
+.ib{width:34px;height:34px;font-size:14px;padding:0}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#wrap{position:relative}#c{width:100%;height:100%;display:block;border-radius:16px;border:1px solid #4a5aa0;touch-action:none}
+#ov{position:absolute;inset:0;border-radius:16px;background:rgba(6,8,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;line-height:1.6}
+#ov h1{margin:0;font-size:32px;font-weight:900;color:#7dffd8;text-shadow:0 3px 0 #0007,0 0 18px #000a}
+#ov p{margin:0;font-size:13px;color:var(--dim)}#ov .big{font-size:44px;font-weight:900}
+.go{padding:13px 40px;font-size:17px}
+.go,.ib{isolation:isolate;position:relative;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
+.go::before,.ib::before{content:"";position:absolute;z-index:-1;left:9%;right:9%;top:3px;height:44%;border-radius:999px;background:linear-gradient(180deg,#ffffffb3,#ffffff14);pointer-events:none}
+.go:active,.ib:active{transform:translateY(1px) scale(.97);filter:brightness(.92)}
+.go.rk{background:linear-gradient(180deg,#c084fc 0%,#7e22ce 52%,#581c87 100%);border-color:#e9d5ff;padding:10px 30px;font-size:14px}
+#rkm{position:fixed;inset:0;background:rgba(5,3,20,.78);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px}
+.rkc{width:min(100%,360px);max-height:80%;overflow:auto;background:linear-gradient(180deg,#2a1670,#0f0a3a);border:1px solid #ffffff2e;border-radius:26px;padding:18px;box-shadow:0 20px 50px #000a;text-align:center;color:#fff;font-family:system-ui,sans-serif}
+.rkc h2{margin:0 0 12px;font-size:24px;font-weight:900}
+.rkl{text-align:left;margin-bottom:14px;color:#cfc9f7;font-size:14px}
+.rkr{display:flex;gap:10px;align-items:center;background:#ffffff14;border-radius:14px;padding:10px 12px;margin-bottom:8px;color:#fff}
+.rkr span:first-child{width:30px;text-align:center;font-weight:900}.rkr span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.rkr span:last-child{font-weight:900;color:#ffd84d}
+.rkr.me{outline:2px solid #a78bfa;background:#a78bfa33}
+</style></head><body><div id="app">
+<div id="hud"><div class="st">COMBO<b id="hl">0</b></div><div class="st">SCORE<b id="hs">0</b></div><div class="st">BEST<b id="ha">0</b></div><button class="ib" id="bp">⏸</button><button class="ib" id="bm">🔊</button></div>
+<div id="stage"><div id="wrap"><canvas id="c"></canvas><div id="ov"></div></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),C=$('c'),X=C.getContext('2d'),W=360,H=640;C.width=W;C.height=H;
+const R=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const GAME='stacktower',MENU_T='STACK<br>TOWER',MENU_P='Tap to drop the moving block.<br>Line it up perfectly to keep the tower wide. Miss and it ends!',OVER_T='TOWER FELL';
+const tg=window.Telegram&&Telegram.WebApp;
+if(tg){tg.ready();tg.expand();try{tg.disableVerticalSwipes()}catch(e){}tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='/'})}
+fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg?tg.initData:''})}).then(r=>r.json()).then(m=>{if(!m.ok||!m.joined)location.href='/'}).catch(()=>{});
+async function submit(){try{await fetch('/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:GAME,score:Math.floor(score),initData:tg?tg.initData:''})})}catch(e){}}
+let best=0;try{best=+localStorage.getItem('stacktowerbest')||0}catch(e){}
+let mode='menu',paused=false,muted=false,T=0,score=0,shake=0,flash=0;
+let AC;function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
+function tone(f,d,ty='sine',v=.06,sl=0,delay=0){if(muted)return;const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),n=a.currentTime+delay;o.type=ty;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+sl),n+d);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(a.destination);o.start(n);o.stop(n+d)}
+function rr(x,y,w,h,r){X.beginPath();X.moveTo(x+r,y);X.arcTo(x+w,y,x+w,y+h,r);X.arcTo(x+w,y+h,x,y+h,r);X.arcTo(x,y+h,x,y,r);X.arcTo(x,y,x+w,y,r);X.closePath()}
+function over(){mode='over';if(score>best){best=Math.floor(score);try{localStorage.setItem('stacktowerbest',best)}catch(e){}}submit();show('over')}
+/* ---- game code ---- */
+const BH=28,BY=568;
+let tower=[],cur=null,dir=1,camY=0,perf=0,debris=[],fx=[],pops=[],hue=200;
+const bcol=(i)=>'hsl('+((hue+i*11)%360)+',72%,58%)';
+function reset(){hue=R(0,360);tower=[{x:90,w:180}];score=0;perf=0;debris=[];fx=[];pops=[];camY=0;shake=0;flash=0;T=0;spawnBlock()}
+function spawnBlock(){const t=tower[tower.length-1];dir=tower.length%2?1:-1;cur={x:dir>0?-t.w:W,w:t.w}}
+const pop=(x,y,s,c)=>pops.push({x,y,s,c,l:1});
+const spd=()=>150+Math.min(score*5,230);
+function drop(){if(mode!=='play'||paused||!cur)return;const t=tower[tower.length-1],L=Math.max(cur.x,t.x),Rt=Math.min(cur.x+cur.w,t.x+t.w),ov=Rt-L,lvl=tower.length;
+ if(ov<=0){debris.push({x:cur.x,w:cur.w,lvl,vy:0,rot:0,vr:dir*2,fall:1});cur=null;mode='dead';tone(140,.5,'sawtooth',.09,-70);shake=8;setTimeout(over,800);return}
+ if(Math.abs(cur.x-t.x)<7){tower.push({x:t.x,w:t.w});perf++;pop(180,BY-lvl*BH-camY-30,perf>1?'PERFECT x'+perf:'PERFECT','#7dffb0');tone(520+perf*60,.15,'triangle',.07);
+  if(perf>=4){const g=Math.min(180,t.w+8);tower[tower.length-1]={x:Math.max(0,t.x-(g-t.w)/2),w:g}}
+  fx.push({ring:1,x:t.x+t.w/2,y:BY-lvl*BH-camY,l:.5})}
+ else{perf=0;tower.push({x:L,w:ov});if(cur.x<t.x)debris.push({x:cur.x,w:L-cur.x,lvl,vy:0,rot:0,vr:-2,fall:1});else debris.push({x:Rt,w:cur.x+cur.w-Rt,lvl,vy:0,rot:0,vr:2,fall:1});tone(300,.1,'square',.05)}
+ score++;spawnBlock()}
+function update(dt){T+=dt;if(cur){cur.x+=dir*spd()*dt;if(cur.x+cur.w>W){cur.x=W-cur.w;dir=-1}if(cur.x<0){cur.x=0;dir=1}}idle(dt,true)}
+function idle(dt,p){if(!p)T+=dt;const want=Math.max(0,(tower.length-5)*BH);camY+=(want-camY)*Math.min(1,dt*5);
+ for(const d of debris){d.vy+=1400*dt;d.y2=(d.y2||0)+d.vy*dt;d.rot+=d.vr*dt}debris=debris.filter(d=>(d.y2||0)<800);
+ for(const f of fx)f.l-=dt;fx=fx.filter(f=>f.l>0);for(const q of pops){q.y-=30*dt;q.l-=dt}pops=pops.filter(q=>q.l>0);shake*=.88;flash=Math.max(0,flash-dt*2.5)}
+function block(x,y,w,i){X.fillStyle=bcol(i);X.fillRect(x,y,w,BH);X.fillStyle='rgba(255,255,255,.3)';X.fillRect(x,y,w,6);X.fillStyle='rgba(0,0,0,.22)';X.fillRect(x,y+BH-5,w,5);X.strokeStyle='rgba(0,0,0,.25)';X.lineWidth=1;X.strokeRect(x+.5,y+.5,w-1,BH-1)}
+function draw(){X.save();if(shake>.3)X.translate(R(-shake,shake),R(-shake,shake));
+ const hh=(hue+camY*.15)%360;let g=X.createLinearGradient(0,0,0,H);g.addColorStop(0,'hsl('+hh+',60%,22%)');g.addColorStop(1,'hsl('+((hh+40)%360)+',65%,45%)');X.fillStyle=g;X.fillRect(-20,-20,W+40,H+40);
+ X.fillStyle='rgba(255,255,255,.5)';for(let i=0;i<30;i++){const sy=(i*83+camY*.2)%H;X.fillRect((i*137)%W,sy,2,2)}
+ X.fillStyle='#1a1a2a';X.fillRect(0,BY+camY,W,H);
+ tower.forEach((t,i)=>{const y=BY-(i+1)*BH+camY;if(y>-BH&&y<H)block(t.x,y,t.w,i)});
+ if(cur)block(cur.x,BY-tower.length*BH+camY,cur.w,tower.length);
+ for(const d of debris){const y=BY-d.lvl*BH+camY+(d.y2||0);X.save();X.translate(d.x+d.w/2,y+BH/2);X.rotate(d.rot*.3);X.translate(-d.w/2,-BH/2);block(0,0,d.w,d.lvl);X.restore()}
+ for(const f of fx)if(f.ring){X.strokeStyle='rgba(255,255,255,'+f.l*2+')';X.lineWidth=3;X.beginPath();X.ellipse(f.x,f.y,(.5-f.l)*260,(.5-f.l)*50,0,0,6.28);X.stroke()}
+ X.textAlign='center';X.font='900 64px Impact,system-ui,sans-serif';X.lineWidth=7;X.strokeStyle='rgba(0,0,0,.35)';X.strokeText(score,W/2,110);X.fillStyle='#fff';X.fillText(score,W/2,110);
+ X.font='900 20px system-ui,sans-serif';for(const q of pops){X.globalAlpha=Math.min(1,q.l*1.5);X.lineWidth=5;X.strokeStyle='rgba(0,0,0,.6)';X.strokeText(q.s,q.x,q.y);X.fillStyle=q.c;X.fillText(q.s,q.x,q.y)}X.globalAlpha=1;
+ if(score===0&&mode==='play'){X.font='900 16px system-ui,sans-serif';X.lineWidth=4;X.strokeStyle='rgba(0,0,0,.5)';X.strokeText('TAP TO DROP THE BLOCK',W/2,160);X.fillStyle='#fff';X.fillText('TAP TO DROP THE BLOCK',W/2,160)}
+ X.restore()}
+const hudVals=()=>[perf,Math.max(best,score)];
+const overSub=()=>score+' blocks stacked';
+C.addEventListener('pointerdown',e=>{e.preventDefault();ac();drop()});
+addEventListener('keydown',e=>{if(e.key==' '||e.key=='ArrowDown'){e.preventDefault();if(!e.repeat)drop()}});
+
+/* ---- common ---- */
+const RK='<button class="go rk" id="rk">🏆 Ranking</button>';
+let hc='';function hud(){const v=hudVals(),h=v.join('|')+'|'+Math.floor(score);if(h===hc)return;hc=h;$('hl').textContent=v[0];$('hs').textContent=Math.floor(score);$('ha').textContent=v[1]}
+function show(k){if(typeof customShow==='function'&&customShow(k))return;const o=$('ov');o.style.display='flex';
+ if(k=='menu')o.innerHTML='<h1>'+MENU_T+'</h1><p>'+MENU_P+'</p><p>BEST '+best+'</p><button class="go" id="go">PLAY</button>'+RK;
+ else if(k=='over')o.innerHTML='<p>'+OVER_T+'</p><div class="big">'+Math.floor(score)+'</div><p>'+overSub()+' · BEST '+best+'</p><button class="go" id="go">RETRY</button>'+RK;
+ else o.innerHTML='<h1>PAUSED</h1><button class="go" id="go">RESUME</button>';
+ $('go').onclick=()=>{ac();if(k=='pause')togglePause();else{reset();mode='play';hc='';o.style.display='none'}}}
+function togglePause(){if(mode!=='play')return;paused=!paused;if(paused)show('pause');else $('ov').style.display='none'}
+$('bp').onclick=togglePause;$('bm').onclick=()=>{muted=!muted;$('bm').textContent=muted?'🔇':'🔊'};
+addEventListener('keydown',e=>{if(e.key=='p'||e.key=='P'||e.key=='Escape')togglePause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play'&&!paused)togglePause()});
+addEventListener('contextmenu',e=>e.preventDefault());
+function fit(){const s=$('stage'),k=Math.min(s.clientWidth/W,s.clientHeight/H),e=$('wrap');e.style.width=W*k+'px';e.style.height=H*k+'px'}
+function openRank(){if($('rkm'))return;const m=document.createElement('div');m.id='rkm';const c=document.createElement('div');c.className='rkc';const t=document.createElement('h2');t.textContent='🏆 Ranking';const l=document.createElement('div');l.className='rkl';l.textContent='Loading...';const b=document.createElement('button');b.className='go';b.textContent='Close';c.append(t,l,b);m.append(c);document.body.append(m);b.onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove()};
+ const me=((tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||{}).first_name||'';
+ fetch('/api/leaderboard?game=stacktower').then(r=>r.json()).then(r=>{l.textContent='';if(!r.length){l.textContent='No scores yet. Be the first!';return}
+  r.forEach((x,i)=>{const d=document.createElement('div');d.className='rkr'+(x.name===me.slice(0,20)?' me':'');const a=document.createElement('span');a.textContent=['🥇','🥈','🥉'][i]||String(i+1);const n=document.createElement('span');n.textContent=x.name;const s=document.createElement('span');s.textContent=x.score;d.append(a,n,s);l.append(d)})}).catch(()=>{l.textContent='Could not load ranking'})}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#rk'))openRank()});
+addEventListener('resize',fit);fit();reset();show('menu');
+let last=performance.now();(function loop(n){const dt=Math.min(.033,(n-last)/1000);last=n;if(!paused){if(mode==='play')update(dt);else idle(dt)}draw();hud();requestAnimationFrame(loop)})(last);
+</script></body></html>
