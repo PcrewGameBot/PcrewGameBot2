@@ -93,6 +93,9 @@ nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc
 .hr{position:absolute;right:50px;top:30px;width:70px;height:8px;border-radius:4px;background:#ff5a2a;box-shadow:0 0 8px #ff5a2a}
 .tl{position:absolute;width:44px;height:44px;border-radius:9px;display:grid;place-items:center;font-weight:900;font-size:20px;color:#fff;box-shadow:inset 0 3px 0 #fff4;animation:fl 3s ease-in-out infinite}
 .t1{right:100px;top:18px;background:#eee4da;color:#776e65}.t2{right:50px;top:18px;background:#f2b179;animation-delay:-.7s}.t3{right:100px;top:68px;background:#f67c5f;animation-delay:-1.4s}.t4{right:50px;top:68px;background:#edcf72;animation-delay:-2s}
+.chips2{display:flex;gap:8px;overflow-x:auto;margin:14px -16px 2px;padding:2px 16px 6px;scrollbar-width:none}.chips2::-webkit-scrollbar{display:none}
+.ch2{flex:none;border:1px solid #ffffff2a;background:#ffffff14;color:#e9e6ff;border-radius:999px;padding:9px 16px;font:700 14px system-ui,sans-serif;white-space:nowrap}
+.ch2.on{background:linear-gradient(180deg,#9d8bff,#5a3fd8);border-color:#d3c8ff;color:#fff;box-shadow:0 4px 12px #5a3fd899}
 /* Glossy gradient pill buttons */
 .pill,.gbtn,.chip.on,nav button.on,.go,.cb,.ib{isolation:isolate;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;letter-spacing:.5px;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
 .gbtn,.chip,nav button,.go,.cb,.ib{position:relative}
@@ -167,13 +170,22 @@ function mkAv(){const a=h('div','av');const ini=()=>{a.textContent=nm[0].toUpper
 function hd(t,r){const d=h('div','hd');d.append(h('h1','',t));if(r)d.append(h('span','',r));return d}
 function prof(){const p=h('div','prof');p.append(mkAv());const m=h('div','pn2');m.append(h('b','',nm));if(U.username)m.append(h('small','','@'+U.username));p.append(m);if(ME.xp!=null)p.append(h('div','sp','🌟 '+ME.xp+' XP'));return p}
 function gr(g,i){const t=TH[g.id]||{},a=h('a','gr');a.href='/g/'+g.id;const ico=h('div','ico');ico.style.background=t.bg||FB[i%FB.length];ico.append(h('span','',g.emoji));a.append(ico);
- const m=h('div','rm');m.append(h('div','rt',g.title),h('div','rd',t.desc||t.sub||''));a.append(m,h('div','pill rp','PLAY'));return a}
+ const m=h('div','rm');m.append(h('div','rt',g.title),h('div','rd',(pl(g)>0?'🔥 '+fmt(pl(g))+' plays · ':'')+(t.desc||t.sub||'')));a.append(m,h('div','pill rp','PLAY'));return a}
+const CATS={action:{t:'Action',e:'🔥'},sport:{t:'Racing & Sports',e:'🏁'},puzzle:{t:'Puzzle',e:'🧠'},tap:{t:'Tap & Skill',e:'👆'}};
+let flt='all';
+const fmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'K':String(n);
+const pl=g=>g.plays||0;
 function home(){const v=$('v');v.innerHTML='';v.append(prof());
- if(games.length){const f=games[games.length-1],t=TH[f.id]||{};v.append(hd('Featured'));const a=h('a','card');a.href='/g/'+f.id;a.style.background=t.bg||FB[0];
-  const art=h('div','art');if(t.art)art.innerHTML=t.art;else art.append(h('div','em',f.emoji));a.append(art,h('div','play pill','PLAY'));if(t.tag)a.append(h('div','tag',t.tag));
-  const cn=h('div','cn',f.title);if(t.sub)cn.append(h('small','',t.sub));a.append(cn);v.append(a)}
- v.append(hd('All games',games.length+' games'),h('p','sb','Pick a game, beat your best score and climb the ranking.'));
- games.slice().reverse().forEach((g,i)=>v.append(gr(g,i)));v.append(h('div','soon','More games coming soon'))}
+ if(games.length){const top=games.slice().sort((a,b)=>pl(b)-pl(a)||games.indexOf(b)-games.indexOf(a))[0],t=TH[top.id]||{};
+  v.append(hd(pl(top)>0?'Most played':'Featured'));const a=h('a','card');a.href='/g/'+top.id;a.style.background=t.bg||FB[0];
+  const art=h('div','art');if(t.art)art.innerHTML=t.art;else art.append(h('div','em',top.emoji));a.append(art,h('div','play pill','PLAY'));
+  a.append(h('div','tag',pl(top)>0?'🔥 '+fmt(pl(top))+' plays':(t.tag||'NEW')));
+  const cn=h('div','cn',top.title);if(t.sub)cn.append(h('small','',t.sub));a.append(cn);v.append(a)}
+ const groups=Object.keys(CATS).map(k=>({k,list:games.filter(g=>(g.cat||'tap')===k).sort((a,b)=>pl(b)-pl(a)),tot:0})).filter(x=>x.list.length);
+ groups.forEach(x=>x.tot=x.list.reduce((s,g)=>s+pl(g),0));groups.sort((a,b)=>b.tot-a.tot);
+ const chips=h('div','chips2');[['all','All']].concat(groups.map(x=>[x.k,CATS[x.k].e+' '+CATS[x.k].t])).forEach(c=>{const b=h('button','ch2'+(flt===c[0]?' on':''),c[1]);b.onclick=()=>{flt=c[0];home()};chips.append(b)});v.append(chips);
+ groups.forEach(x=>{if(flt!=='all'&&flt!==x.k)return;v.append(hd(CATS[x.k].e+' '+CATS[x.k].t,x.list.length+(x.list.length>1?' games':' game')));x.list.forEach((g,i)=>v.append(gr(g,i)))});
+ v.append(h('div','soon','More games coming soon'))}
 async function board(){const v=$('v');v.innerHTML='';v.append(hd('Leaderboard'),h('p','sb','Overall ranking. Open a game to see its top players.'));
  const mc=h('div','mc');mc.append(mkAv());const m=h('div','pn2');m.append(h('b','','Your rank'),h('small','',ME.xp!=null?ME.xp+' XP':'-'));mc.append(m,h('div','sp',ME.rank?'#'+ME.rank:'-'));v.append(mc);
  const box=h('div','');v.append(box);let r=[];try{r=await (await fetch('/api/leaderboard?game=overall')).json()}catch(e){}

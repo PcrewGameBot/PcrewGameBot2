@@ -58,19 +58,19 @@ BOT = None
 # To add a game: upload its html file and add one line here.
 # xp = XP per 1 score point, used for the Overall leaderboard (0.1 = 100 score is 10 XP).
 GAMES = {
-    "thunderstorm": {"title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html", "xp": 0.1},
-    "spaceshooter": {"title": "Space Shooter", "emoji": "🚀", "file": "spaceshooter.html", "xp": 0.05},
-    "sortcolors": {"title": "Sort the Colours", "emoji": "🧪", "file": "sortcolors.html", "xp": 0.05},
-    "timberchop": {"title": "Timber Chop", "emoji": "🪓", "file": "timberchop.html", "xp": 0.5},
-    "crowdcannon": {"title": "Crowd Cannon", "emoji": "💣", "file": "crowdcannon.html", "xp": 0.05},
-    "trafficracer": {"title": "Traffic Racer", "emoji": "🏎️", "file": "trafficracer.html", "xp": 0.05},
-    "penalty": {"title": "Penalty Shootout", "emoji": "⚽", "file": "penalty.html", "xp": 4},
-    "leveldevil": {"title": "Level Devil", "emoji": "😈", "file": "leveldevil.html", "xp": 3},
-    "blockblast": {"title": "Block Blast", "emoji": "🧩", "file": "blockblast.html", "xp": 0.05},
-    "fruitslice": {"title": "Fruit Slice", "emoji": "🍉", "file": "fruitslice.html", "xp": 1},
-    "stacktower": {"title": "Stack Tower", "emoji": "🧱", "file": "stacktower.html", "xp": 1.5},
-    "hoopshot": {"title": "Hoop Shot", "emoji": "🏀", "file": "hoopshot.html", "xp": 3},
-    "game2048": {"title": "2048", "emoji": "🔢", "file": "game2048.html", "xp": 0.01},
+    "thunderstorm": {"cat": "action", "title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html", "xp": 0.1},
+    "spaceshooter": {"cat": "action", "title": "Space Shooter", "emoji": "🚀", "file": "spaceshooter.html", "xp": 0.05},
+    "sortcolors": {"cat": "puzzle", "title": "Sort the Colours", "emoji": "🧪", "file": "sortcolors.html", "xp": 0.05},
+    "timberchop": {"cat": "tap", "title": "Timber Chop", "emoji": "🪓", "file": "timberchop.html", "xp": 0.5},
+    "crowdcannon": {"cat": "action", "title": "Crowd Cannon", "emoji": "💣", "file": "crowdcannon.html", "xp": 0.05},
+    "trafficracer": {"cat": "sport", "title": "Traffic Racer", "emoji": "🏎️", "file": "trafficracer.html", "xp": 0.05},
+    "penalty": {"cat": "sport", "title": "Penalty Shootout", "emoji": "⚽", "file": "penalty.html", "xp": 4},
+    "leveldevil": {"cat": "action", "title": "Level Devil", "emoji": "😈", "file": "leveldevil.html", "xp": 3},
+    "blockblast": {"cat": "puzzle", "title": "Block Blast", "emoji": "🧩", "file": "blockblast.html", "xp": 0.05},
+    "fruitslice": {"cat": "tap", "title": "Fruit Slice", "emoji": "🍉", "file": "fruitslice.html", "xp": 1},
+    "stacktower": {"cat": "tap", "title": "Stack Tower", "emoji": "🧱", "file": "stacktower.html", "xp": 1.5},
+    "hoopshot": {"cat": "sport", "title": "Hoop Shot", "emoji": "🏀", "file": "hoopshot.html", "xp": 3},
+    "game2048": {"cat": "puzzle", "title": "2048", "emoji": "🔢", "file": "game2048.html", "xp": 0.01},
 }
 
 # DATABASE_URL set = Postgres (data is never lost), otherwise SQLite
@@ -88,6 +88,7 @@ if DATABASE_URL:
             conn.close()
 
     BEST = "GREATEST(scores.score, excluded.score)"
+    INC = "plays.n + 1"
 else:
     _db = sqlite3.connect(DB, check_same_thread=False)
 
@@ -97,7 +98,9 @@ else:
         return cur.fetchall() if fetch else None
 
     BEST = "MAX(score, excluded.score)"
+    INC = "n + 1"
 
+q("CREATE TABLE IF NOT EXISTS plays(game TEXT PRIMARY KEY, n BIGINT)")
 q("CREATE TABLE IF NOT EXISTS scores(game TEXT, uid BIGINT, name TEXT, score BIGINT, ts BIGINT, PRIMARY KEY(game, uid))")
 
 
@@ -180,11 +183,17 @@ async def game_page(req):
     g = GAMES.get(req.match_info["name"])
     if not g:
         raise web.HTTPNotFound()
+    try:
+        q("INSERT INTO plays VALUES(?, 1) ON CONFLICT(game) DO UPDATE SET n=" + INC, (req.match_info["name"],))
+    except Exception as e:
+        print("plays counter error:", e)
     return web.FileResponse(os.path.join(HERE, g["file"]))
 
 
 async def api_games(req):
-    return web.json_response([{"id": k, "title": v["title"], "emoji": v["emoji"]} for k, v in GAMES.items()])
+    plays = dict(q("SELECT game, n FROM plays", (), True))
+    return web.json_response([{"id": k, "title": v["title"], "emoji": v["emoji"], "cat": v.get("cat", "tap"),
+                               "plays": int(plays.get(k, 0))} for k, v in GAMES.items()])
 
 
 async def api_me(req):
