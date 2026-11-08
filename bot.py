@@ -66,6 +66,11 @@ GAMES = {
     "trafficracer": {"title": "Traffic Racer", "emoji": "🏎️", "file": "trafficracer.html", "xp": 0.05},
     "penalty": {"title": "Penalty Shootout", "emoji": "⚽", "file": "penalty.html", "xp": 4},
     "leveldevil": {"title": "Level Devil", "emoji": "😈", "file": "leveldevil.html", "xp": 3},
+    "blockblast": {"title": "Block Blast", "emoji": "🧩", "file": "blockblast.html", "xp": 0.05},
+    "fruitslice": {"title": "Fruit Slice", "emoji": "🍉", "file": "fruitslice.html", "xp": 1},
+    "stacktower": {"title": "Stack Tower", "emoji": "🧱", "file": "stacktower.html", "xp": 1.5},
+    "hoopshot": {"title": "Hoop Shot", "emoji": "🏀", "file": "hoopshot.html", "xp": 3},
+    "game2048": {"title": "2048", "emoji": "🔢", "file": "game2048.html", "xp": 0.01},
 }
 
 # DATABASE_URL set = Postgres (data is never lost), otherwise SQLite

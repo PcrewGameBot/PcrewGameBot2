@@ -80,6 +80,19 @@ nav button i{font-style:normal;font-size:22px}nav button.on{background:var(--acc
 .sp1{right:160px}.sp2{right:132px;animation-delay:-1.1s}
 @keyframes spk{0%,60%,100%{transform:translateY(24px);opacity:0}70%,90%{transform:translateY(0);opacity:1}}
 .st1{position:absolute;right:112px;top:84px;font-size:36px}
+
+.bb{position:absolute;width:30px;height:30px;border-radius:7px;box-shadow:inset 0 -4px 0 #0004,inset 0 4px 0 #fff4;animation:fl 3s ease-in-out infinite}
+.b1{right:120px;top:22px;background:#ef4444}.b2{right:86px;top:22px;background:#f59e0b;animation-delay:-.6s}.b3{right:86px;top:56px;background:#22c55e;animation-delay:-1.2s}.b4{right:52px;top:56px;background:#3b82f6;animation-delay:-1.8s}
+.fr{position:absolute;font-size:52px;animation:fl 2.4s ease-in-out infinite}.f1{right:90px;top:14px}.f2{right:30px;top:52px;animation-delay:-1.2s}
+.sl{position:absolute;right:40px;top:30px;width:120px;height:4px;background:linear-gradient(90deg,transparent,#fff);transform:rotate(-30deg);border-radius:3px;animation:slc 1.8s ease-in-out infinite}
+@keyframes slc{0%,60%,100%{opacity:0}70%,85%{opacity:1}}
+.sk{position:absolute;height:22px;border-radius:5px;box-shadow:inset 0 -4px 0 #0003,inset 0 3px 0 #fff4;animation:fl 3s ease-in-out infinite}
+.k1{right:50px;bottom:66px;width:96px;background:#f59e0b}.k2{right:56px;bottom:90px;width:84px;background:#22c55e;animation-delay:-.5s}.k3{right:62px;bottom:114px;width:70px;background:#3b82f6;animation-delay:-1s}.k4{right:68px;bottom:138px;width:56px;background:#a855f7;animation-delay:-1.5s}
+.hp{position:absolute;right:112px;top:84px;font-size:34px;animation:hpa 1.6s ease-in infinite}
+@keyframes hpa{0%{transform:translate(0,0)}60%{transform:translate(18px,-58px)}100%{transform:translate(26px,-30px) scale(.8)}}
+.hr{position:absolute;right:50px;top:30px;width:70px;height:8px;border-radius:4px;background:#ff5a2a;box-shadow:0 0 8px #ff5a2a}
+.tl{position:absolute;width:44px;height:44px;border-radius:9px;display:grid;place-items:center;font-weight:900;font-size:20px;color:#fff;box-shadow:inset 0 3px 0 #fff4;animation:fl 3s ease-in-out infinite}
+.t1{right:100px;top:18px;background:#eee4da;color:#776e65}.t2{right:50px;top:18px;background:#f2b179;animation-delay:-.7s}.t3{right:100px;top:68px;background:#f67c5f;animation-delay:-1.4s}.t4{right:50px;top:68px;background:#edcf72;animation-delay:-2s}
 /* Glossy gradient pill buttons */
 .pill,.gbtn,.chip.on,nav button.on,.go,.cb,.ib{isolation:isolate;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;letter-spacing:.5px;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
 .gbtn,.chip,nav button,.go,.cb,.ib{position:relative}
@@ -138,6 +151,16 @@ TH.penalty={bg:'linear-gradient(135deg,#0d3b22,#16803c 55%,#86efac)',tag:'NEW',s
 art:'<span class="gl">🥅</span><span class="bl">⚽</span><span class="kp">🧤</span>'};
 TH.leveldevil={bg:'linear-gradient(135deg,#3a0d12,#b3261e 55%,#ff8a3d)',tag:'HOT',sub:'Trust nothing.',desc:'A troll platformer with 4 maps and endless levels. Reach the door!',
 art:'<span class="dv">😈</span><i class="sp1"></i><i class="sp2"></i><span class="st1">🚪</span>'};
+TH.blockblast={bg:'linear-gradient(135deg,#1d1450,#6d28d9 55%,#f472b6)',tag:'HOT',sub:'Clear the lines.',desc:'Drop shapes onto the grid and clear rows for combos.',
+art:'<span class="bb b1"></span><span class="bb b2"></span><span class="bb b3"></span><span class="bb b4"></span>'};
+TH.fruitslice={bg:'linear-gradient(135deg,#4a2a10,#c2410c 55%,#fbbf24)',tag:'NEW',sub:'Swipe to slice.',desc:'Slice flying fruit, dodge bombs and chain big combos.',
+art:'<span class="fr f1">🍉</span><span class="fr f2">🍊</span><span class="sl"></span>'};
+TH.stacktower={bg:'linear-gradient(135deg,#1b2a5e,#3b5bdb 55%,#74e0c8)',tag:'NEW',sub:'Build it high.',desc:'Time your taps to stack the tower as tall as you can.',
+art:'<span class="sk k1"></span><span class="sk k2"></span><span class="sk k3"></span><span class="sk k4"></span>'};
+TH.hoopshot={bg:'linear-gradient(135deg,#1d2a5e,#c2410c 60%,#fdba74)',tag:'NEW',sub:'Swish it.',desc:'Pull back, aim and sink shots. Swishes score double.',
+art:'<span class="hp">🏀</span><i class="hr"></i>'};
+TH.game2048={bg:'linear-gradient(135deg,#2b2438,#7c5cbf 55%,#f3b43a)',tag:'CLASSIC',sub:'Merge to 2048.',desc:'Swipe to merge equal tiles and reach 2048.',
+art:'<span class="tl t1">2</span><span class="tl t2">4</span><span class="tl t3">8</span><span class="tl t4">16</span>'};
 const FB=['linear-gradient(135deg,#d97706,#fbbf24)','linear-gradient(135deg,#6d28d9,#a855f7)','linear-gradient(135deg,#047857,#34d399)','linear-gradient(135deg,#be123c,#fb7185)'];
 let games=[],ME={};
 function mkAv(){const a=h('div','av');const ini=()=>{a.textContent=nm[0].toUpperCase()};if(U.photo_url){const i=new Image();i.src=U.photo_url;i.onerror=()=>{i.remove();ini()};a.appendChild(i)}else ini();return a}
