@@ -1,0 +1,116 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Gravity Flip</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--ink:#f4f7ff;--dim:#b4bfd8;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html,body{height:100%;margin:0;background:#0a0620;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#app{height:100%;display:flex;flex-direction:column;gap:6px;padding:8px;box-sizing:border-box}
+#hud{display:flex;align-items:center;gap:8px;border:1px solid #5a3fb0;border-radius:14px;padding:6px 10px;background:#150b33}
+.st{flex:1;text-align:center;font-size:10px;color:var(--dim);font-weight:700}.st b{display:block;font-size:17px;color:var(--ink);font-weight:900;white-space:nowrap}
+.ib{width:34px;height:34px;font-size:14px;padding:0}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#wrap{position:relative}#c{width:100%;height:100%;display:block;border-radius:16px;border:1px solid #5a3fb0;touch-action:none}
+#ov{position:absolute;inset:0;border-radius:16px;background:rgba(6,8,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;line-height:1.6}
+#ov h1{margin:0;font-size:32px;font-weight:900;color:#ff4fd8;text-shadow:0 3px 0 #0007,0 0 18px #000a}
+#ov p{margin:0;font-size:13px;color:var(--dim)}#ov .big{font-size:44px;font-weight:900}
+.go{padding:13px 40px;font-size:17px}
+.go,.ib{isolation:isolate;position:relative;border:2px solid #8f9bff;border-radius:999px;color:#fff;font-weight:900;background:linear-gradient(180deg,#5b78ff 0%,#2c35e6 52%,#1b20b9 100%);box-shadow:0 0 0 1px #0a0f5a,0 4px 14px #2c35e688,inset 0 -3px 7px #0a0e7a99}
+.go::before,.ib::before{content:"";position:absolute;z-index:-1;left:9%;right:9%;top:3px;height:44%;border-radius:999px;background:linear-gradient(180deg,#ffffffb3,#ffffff14);pointer-events:none}
+.go:active,.ib:active{transform:translateY(1px) scale(.97);filter:brightness(.92)}
+.go.rk{background:linear-gradient(180deg,#c084fc 0%,#7e22ce 52%,#581c87 100%);border-color:#e9d5ff;padding:10px 30px;font-size:14px}
+#rkm{position:fixed;inset:0;background:rgba(5,3,20,.78);z-index:99;display:flex;align-items:center;justify-content:center;padding:20px}
+.rkc{width:min(100%,360px);max-height:80%;overflow:auto;background:linear-gradient(180deg,#2a1670,#0f0a3a);border:1px solid #ffffff2e;border-radius:26px;padding:18px;box-shadow:0 20px 50px #000a;text-align:center;color:#fff;font-family:system-ui,sans-serif}
+.rkc h2{margin:0 0 12px;font-size:24px;font-weight:900}
+.rkl{text-align:left;margin-bottom:14px;color:#cfc9f7;font-size:14px}
+.rkr{display:flex;gap:10px;align-items:center;background:#ffffff14;border-radius:14px;padding:10px 12px;margin-bottom:8px;color:#fff}
+.rkr span:first-child{width:30px;text-align:center;font-weight:900}.rkr span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.rkr span:last-child{font-weight:900;color:#ffd84d}
+.rkr.me{outline:2px solid #a78bfa;background:#a78bfa33}
+</style></head><body><div id="app">
+<div id="hud"><div class="st">SPEED<b id="hl">0</b></div><div class="st">SCORE<b id="hs">0</b></div><div class="st">COINS<b id="ha">0</b></div><button class="ib" id="bp">⏸</button><button class="ib" id="bm">🔊</button></div>
+<div id="stage"><div id="wrap"><canvas id="c"></canvas><div id="ov"></div></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),C=$('c'),X=C.getContext('2d'),W=360,H=640;C.width=W;C.height=H;
+const R=(a,b)=>a+Math.random()*(b-a),clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const GAME='gravityflip',MENU_T='GRAVITY<br>FLIP',MENU_P='Tap to flip gravity and run on the ceiling.<br>Dodge spikes and pillars. Grab the coins!',OVER_T='CRASHED';
+const tg=window.Telegram&&Telegram.WebApp;
+if(tg){tg.ready();tg.expand();try{tg.disableVerticalSwipes()}catch(e){}tg.BackButton.show();tg.BackButton.onClick(()=>{location.href='/'})}
+fetch('/api/me',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg?tg.initData:''})}).then(r=>r.json()).then(m=>{if(!m.ok||!m.joined)location.href='/'}).catch(()=>{});
+async function submit(){try{await fetch('/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:GAME,score:Math.floor(score),initData:tg?tg.initData:''})})}catch(e){}}
+let best=0;try{best=+localStorage.getItem('gravityflipbest')||0}catch(e){}
+let mode='menu',paused=false,muted=false,T=0,score=0,shake=0,flash=0;
+let AC;function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
+function tone(f,d,ty='sine',v=.06,sl=0,delay=0){if(muted)return;const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),n=a.currentTime+delay;o.type=ty;o.frequency.setValueAtTime(f,n);if(sl)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+sl),n+d);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(a.destination);o.start(n);o.stop(n+d)}
+function rr(x,y,w,h,r){X.beginPath();X.moveTo(x+r,y);X.arcTo(x+w,y,x+w,y+h,r);X.arcTo(x+w,y+h,x,y+h,r);X.arcTo(x,y+h,x,y,r);X.arcTo(x,y,x+w,y,r);X.closePath()}
+function over(){mode='over';if(score>best){best=Math.floor(score);try{localStorage.setItem('gravityflipbest',best)}catch(e){}}submit();show('over')}
+/* ---- game code ---- */
+const FY=500,CY=140,PX=90,PS=26;
+let g=1,py=FY-PS,obst=[],coins=[],dist=0,nextX=0,coinN=0,trail=[],fx=[],pops=[],v=260;
+function reset(){g=1;py=FY-PS;obst=[];coins=[];dist=0;coinN=0;trail=[];fx=[];pops=[];score=0;shake=0;flash=0;T=0;v=260;nextX=W+200}
+const pop=(x,y,s,c)=>pops.push({x,y,s,c,l:1});
+function spark(x,y,n,c){for(let i=0;i<n&&fx.length<200;i++){const a=R(0,6.28),s=R(40,240);fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:R(.3,.6),c})}}
+function flip(){if(mode!=='play'||paused)return;g=-g;tone(g>0?300:480,.08,'square',.05,150)}
+function die(){if(mode!=='play')return;mode='dead';shake=10;flash=.5;spark(PX+13,py+13,34,'#ff4fd8');tone(130,.5,'sawtooth',.1,-80);setTimeout(over,700)}
+function spawn(){const t=Math.floor(R(0,6)),x=nextX;let w=0;
+ const spikes=(n,top)=>{for(let i=0;i<n;i++)obst.push({t:'sp',x:x+i*30,w:30,top});w=n*30};
+ if(t===0)spikes(1+Math.floor(R(0,3)),false);else if(t===1)spikes(1+Math.floor(R(0,3)),true);
+ else if(t===2){obst.push({t:'pil',x,w:34,h:200,top:true});w=34}else if(t===3){obst.push({t:'pil',x,w:34,h:200,top:false});w=34}
+ else if(t===4){for(let i=0;i<3;i++)obst.push({t:'pil',x:x+i*Math.max(250,v*.62),w:34,h:200,top:i%2===0});w=2*Math.max(250,v*.62)+34}
+ else{spikes(2,false);for(let i=0;i<2;i++)obst.push({t:'sp',x:x+140+i*30,w:30,top:true});w=200}
+ if(Math.random()<.6){const cy=Math.random()<.5?FY-60:CY+60;for(let i=0;i<3;i++)coins.push({x:x+w/2+i*30-30,y:cy})}
+ nextX=x+w+Math.max(220,400-v*.25)+R(0,110)}
+function update(dt){T+=dt;v=260+Math.min(score*1.8,300);dist+=v*dt;score=Math.floor(dist/12)+coinN*5;
+ const tgt=g>0?FY-PS:CY;py+=Math.sign(tgt-py)*Math.min(Math.abs(tgt-py),1500*dt);
+ nextX-=v*dt;while(nextX<W+240)spawn();
+ for(const o of obst)o.x-=v*dt;for(const c of coins)c.x-=v*dt;
+ for(const o of obst){if(o.x>PX+PS+4||o.x+o.w<PX-4)continue;const px1=PX+3,px2=PX+PS-3,pt=py+3,pb=py+PS-3;let hit=false;
+  if(o.t==='sp'){const x1=o.x+5,x2=o.x+o.w-5;if(px2>x1&&px1<x2){const sy=o.top?CY:FY-16;hit=o.top?pt<CY+16:pb>FY-16}}
+  else{const y1=o.top?CY:FY-o.h,y2=o.top?CY+o.h:FY;hit=px2>o.x&&px1<o.x+o.w&&pb>y1&&pt<y2}
+  if(hit){die();return}}
+ for(const c of coins)if(!c.got&&Math.hypot(c.x-(PX+PS/2),c.y-(py+PS/2))<22){c.got=1;coinN++;pop(PX+20,py-10,'+5','#ffe066');tone(900,.07,'triangle',.06);spark(c.x,c.y,6,'#ffe066')}
+ obst=obst.filter(o=>o.x+o.w>-40);coins=coins.filter(c=>c.x>-30&&!c.got);
+ trail.push({x:PX+PS/2,y:py+PS/2,l:.3});idle(dt,true)}
+function idle(dt,p){if(!p)T+=dt;for(const t of trail){t.x-=v*dt;t.l-=dt}trail=trail.filter(t=>t.l>0);for(const f of fx){f.x+=f.vx*dt;f.y+=f.vy*dt;f.l-=dt}fx=fx.filter(f=>f.l>0);for(const q of pops){q.y-=30*dt;q.l-=dt}pops=pops.filter(q=>q.l>0);shake*=.88;flash=Math.max(0,flash-dt*2.5)}
+function tri(x,w,top){X.beginPath();if(top){X.moveTo(x,CY);X.lineTo(x+w,CY);X.lineTo(x+w/2,CY+30)}else{X.moveTo(x,FY);X.lineTo(x+w,FY);X.lineTo(x+w/2,FY-30)}X.closePath();X.fill();X.stroke()}
+function draw(){X.save();if(shake>.3)X.translate(R(-shake,shake),R(-shake,shake));
+ let gr=X.createLinearGradient(0,0,0,H);gr.addColorStop(0,'#1a0b3d');gr.addColorStop(1,'#0a0620');X.fillStyle=gr;X.fillRect(-20,-20,W+40,H+40);
+ X.strokeStyle='rgba(120,90,255,.18)';X.lineWidth=1;X.beginPath();const off=(dist*.5)%40;for(let x=-off;x<W;x+=40){X.moveTo(x,CY);X.lineTo(x,FY)}for(let y=CY;y<=FY;y+=40){X.moveTo(0,y);X.lineTo(W,y)}X.stroke();
+ X.fillStyle='#ff4fd8';X.shadowColor='#ff4fd8';X.shadowBlur=14;X.fillRect(0,CY-6,W,6);X.fillStyle='#35d6ff';X.shadowColor='#35d6ff';X.fillRect(0,FY,W,6);X.shadowBlur=0;
+ X.fillStyle='#10062a';X.fillRect(0,0,W,CY-6);X.fillRect(0,FY+6,W,H);
+ X.lineWidth=2;for(const o of obst){if(o.t==='sp'){X.fillStyle='#ff4fd8';X.strokeStyle='#ffd0f4';tri(o.x,o.w,o.top)}else{const y1=o.top?CY:FY-o.h;const pg=X.createLinearGradient(o.x,0,o.x+o.w,0);pg.addColorStop(0,'#6d28d9');pg.addColorStop(.5,'#a78bfa');pg.addColorStop(1,'#6d28d9');X.fillStyle=pg;X.fillRect(o.x,y1,o.w,o.h);X.strokeStyle='#d8c8ff';X.strokeRect(o.x,y1,o.w,o.h)}}
+ for(const c of coins){X.fillStyle='#ffd84d';X.shadowColor='#ffd84d';X.shadowBlur=10;X.beginPath();X.arc(c.x,c.y,8,0,6.28);X.fill();X.shadowBlur=0}
+ for(const t of trail){X.globalAlpha=t.l*1.5;X.fillStyle='#35d6ff';X.fillRect(t.x-6,t.y-6,12,12)}X.globalAlpha=1;
+ if(mode!=='dead'){X.save();X.translate(PX+PS/2,py+PS/2);X.fillStyle='#35d6ff';X.shadowColor='#35d6ff';X.shadowBlur=14;rr(-PS/2,-PS/2,PS,PS,6);X.fill();X.shadowBlur=0;X.fillStyle='#fff';const ey=g>0?-4:4;X.fillRect(1,ey-2,5,5);X.fillRect(-8,ey-2,5,5);X.fillStyle='#08284a';X.fillRect(3,ey,2,2);X.fillRect(-6,ey,2,2);X.restore()}
+ for(const f of fx){X.globalAlpha=Math.min(1,f.l*3);X.fillStyle='#ff4fd8';X.fillRect(f.x,f.y,4,4)}X.globalAlpha=1;
+ X.textAlign='center';X.font='900 52px Impact,system-ui,sans-serif';X.lineWidth=7;X.strokeStyle='rgba(0,0,0,.5)';X.strokeText(score,W/2,90);X.fillStyle='#fff';X.fillText(score,W/2,90);
+ X.font='900 18px system-ui,sans-serif';for(const q of pops){X.globalAlpha=Math.min(1,q.l*1.5);X.lineWidth=5;X.strokeStyle='rgba(0,0,0,.6)';X.strokeText(q.s,q.x,q.y);X.fillStyle=q.c;X.fillText(q.s,q.x,q.y)}X.globalAlpha=1;
+ if(score<3&&mode==='play'){X.font='900 16px system-ui,sans-serif';X.lineWidth=4;X.strokeStyle='rgba(0,0,0,.5)';X.strokeText('TAP TO FLIP GRAVITY',W/2,590);X.fillStyle='#fff';X.fillText('TAP TO FLIP GRAVITY',W/2,590)}
+ if(flash>0){X.fillStyle='rgba(255,79,216,'+flash*.5+')';X.fillRect(-20,-20,W+40,H+40)}
+ X.restore()}
+const hudVals=()=>[Math.round(v/3),coinN];
+const overSub=()=>coinN+' coins';
+C.addEventListener('pointerdown',e=>{e.preventDefault();ac();flip()});
+addEventListener('keydown',e=>{if(e.key==' '||e.key=='ArrowUp'||e.key=='ArrowDown'){e.preventDefault();if(!e.repeat)flip()}});
+
+/* ---- common ---- */
+const RK='<button class="go rk" id="rk">🏆 Ranking</button>';
+let hc='';function hud(){const v=hudVals(),h=v.join('|')+'|'+Math.floor(score);if(h===hc)return;hc=h;$('hl').textContent=v[0];$('hs').textContent=Math.floor(score);$('ha').textContent=v[1]}
+function show(k){if(typeof customShow==='function'&&customShow(k))return;const o=$('ov');o.style.display='flex';
+ if(k=='menu')o.innerHTML='<h1>'+MENU_T+'</h1><p>'+MENU_P+'</p><p>BEST '+best+'</p><button class="go" id="go">PLAY</button>'+RK;
+ else if(k=='over')o.innerHTML='<p>'+OVER_T+'</p><div class="big">'+Math.floor(score)+'</div><p>'+overSub()+' · BEST '+best+'</p><button class="go" id="go">RETRY</button>'+RK;
+ else o.innerHTML='<h1>PAUSED</h1><button class="go" id="go">RESUME</button>';
+ $('go').onclick=()=>{ac();if(k=='pause')togglePause();else{reset();mode='play';hc='';o.style.display='none'}}}
+function togglePause(){if(mode!=='play')return;paused=!paused;if(paused)show('pause');else $('ov').style.display='none'}
+$('bp').onclick=togglePause;$('bm').onclick=()=>{muted=!muted;$('bm').textContent=muted?'🔇':'🔊'};
+addEventListener('keydown',e=>{if(e.key=='p'||e.key=='P'||e.key=='Escape')togglePause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play'&&!paused)togglePause()});
+addEventListener('contextmenu',e=>e.preventDefault());
+function fit(){const s=$('stage'),k=Math.min(s.clientWidth/W,s.clientHeight/H),e=$('wrap');e.style.width=W*k+'px';e.style.height=H*k+'px'}
+function openRank(){if($('rkm'))return;const m=document.createElement('div');m.id='rkm';const c=document.createElement('div');c.className='rkc';const t=document.createElement('h2');t.textContent='🏆 Ranking';const l=document.createElement('div');l.className='rkl';l.textContent='Loading...';const b=document.createElement('button');b.className='go';b.textContent='Close';c.append(t,l,b);m.append(c);document.body.append(m);b.onclick=()=>m.remove();m.onclick=e=>{if(e.target===m)m.remove()};
+ const me=((tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||{}).first_name||'';
+ fetch('/api/leaderboard?game=gravityflip').then(r=>r.json()).then(r=>{l.textContent='';if(!r.length){l.textContent='No scores yet. Be the first!';return}
+  r.forEach((x,i)=>{const d=document.createElement('div');d.className='rkr'+(x.name===me.slice(0,20)?' me':'');const a=document.createElement('span');a.textContent=['🥇','🥈','🥉'][i]||String(i+1);const n=document.createElement('span');n.textContent=x.name;const s=document.createElement('span');s.textContent=x.score;d.append(a,n,s);l.append(d)})}).catch(()=>{l.textContent='Could not load ranking'})}
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#rk'))openRank()});
+addEventListener('resize',fit);fit();reset();show('menu');
+let last=performance.now();(function loop(n){const dt=Math.min(.033,(n-last)/1000);last=n;if(!paused){if(mode==='play')update(dt);else idle(dt)}draw();hud();requestAnimationFrame(loop)})(last);
+</script></body></html>
