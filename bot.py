@@ -173,7 +173,11 @@ async def court_state(req):
     data["ownerUsername"]=OWNER_USERNAME
     if row:
         cases=q("SELECT case_id, category, complaint, response, verdict, punishment, status, created, plaintiff, defendant, winner_id, loser_id FROM court_cases WHERE couple_id=? ORDER BY created DESC LIMIT 20",(row[0],),True)
-        data["cases"]=[{"id":x[0],"category":x[1],"complaint":x[2],"response":x[3],"verdict":x[4],"punishment":x[5],"status":x[6],"created":x[7],"plaintiff":x[8],"defendant":x[9],"winner":x[10],"loser":x[11]} for x in cases]
+        cpl=q("SELECT user1,name1,user1_username,user2,name2,user2_username FROM couples WHERE couple_id=?",(row[0],),True)[0]
+        def case_person(uid):
+            if uid == cpl[0]: return {"name":cpl[1] or "Player", "username":cpl[2]}
+            return {"name":cpl[4] or "Player", "username":cpl[5]}
+        data["cases"]=[{"id":x[0],"category":x[1],"complaint":x[2],"response":x[3],"verdict":x[4],"punishment":x[5],"status":x[6],"created":x[7],"plaintiff":x[8],"defendant":x[9],"winner":x[10],"loser":x[11],"plaintiffUser":case_person(x[8]),"defendantUser":case_person(x[9])} for x in cases]
         data["myId"]=u["id"]
         data["isOwner"]=bool(OWNER_ID and u["id"]==OWNER_ID)
         data["ownerUsername"]=OWNER_USERNAME
@@ -254,16 +258,23 @@ async def court_respond(req):
     winner=plaintiff if verdict=="GUILTY" else defendant
     loser=defendant if verdict=="GUILTY" else plaintiff
     q("UPDATE court_cases SET response=?,verdict=?,winner_id=?,loser_id=?,status='awaiting_spin' WHERE case_id=?",(response,verdict,winner,loser,caseid))
-    names=q("SELECT user1,name1,user2,name2 FROM couples WHERE couple_id=?",(cid,),True)[0]
+    people=q("SELECT user1,name1,user1_username,user2,name2,user2_username FROM couples WHERE couple_id=?",(cid,),True)[0]
+    def person(uid):
+        if uid == people[0]: return (people[1] or "Player", people[2])
+        return (people[4] or "Player", people[5])
+    p_name,p_username=person(plaintiff); d_name,d_username=person(defendant)
+    p_label="@"+p_username if p_username else p_name
+    d_label="@"+d_username if d_username else d_name
+    if verdict=="GUILTY":
+        lines=["⚖️ <b>တရားရုံး၏ အမိန့်</b>",f"📁 အမှုနံပါတ်: <b>{html.escape(caseid)}</b>","",f"👤 တရားစွဲသူ: <b>{html.escape(p_label)}</b>",f"👤 အစွဲခံရသူ: <b>{html.escape(d_label)}</b>","", "<blockquote>🔴 တရားခံတွင် အပြစ်ရှိကြောင်း တွေ့ရှိရပါသည်။\n⚖️ တရားစွဲသူ၏ တိုင်ကြားချက် ခိုင်လုံသဖြင့် အမှုနိုင်ပါသည်။\n📜 အစွဲခံရသူအတွက် ပြစ်ဒဏ်ချမှတ်မည်။</blockquote>","🏆 အမှုနိုင်သူသာ ပြစ်ဒဏ်စက်ဝိုင်းကို လှည့်ခွင့်ရှိပါသည်။"]
+    else:
+        lines=["⚖️ <b>တရားရုံး၏ အမိန့်</b>",f"📁 အမှုနံပါတ်: <b>{html.escape(caseid)}</b>","",f"👤 တရားစွဲသူ: <b>{html.escape(p_label)}</b>",f"👤 အစွဲခံရသူ: <b>{html.escape(d_label)}</b>","", "<blockquote>🟢 တရားစွဲသူ၏ တိုင်ကြားချက် ခိုင်လုံမှုမရှိသဖြင့် အမှုရှုံးနိမ့်ပါသည်။\n⚖️ မမှန်မကန် တရားစွဲမှုအတွက် တရားစွဲသူအား ပြစ်ဒဏ်ချမှတ်မည်။\n🏅 အစွဲခံရသူက အမှုနိုင်ပါသည်။</blockquote>","🏆 အမှုနိုင်သူသာ ပြစ်ဒဏ်စက်ဝိုင်းကို လှည့်ခွင့်ရှိပါသည်。"]
+    msg="\n".join(lines)
     if BOT:
-        if verdict=="GUILTY":
-            msg=f"⚖️ တရားရုံး၏ အမိန့် — {caseid}\n\nတရားခံတွင် အပြစ်ရှိကြောင်း တွေ့ရှိရပါသည်။\nတရားစွဲသူက အမှုနိုင်ပါသည်။\n\nအမှုနိုင်သူသာ ပြစ်ဒဏ်စက်ဝိုင်းကို လှည့်ခွင့်ရှိပါသည်။"
-        else:
-            msg=f"⚖️ တရားရုံး၏ အမိန့် — {caseid}\n\nတရားစွဲသူ၏ တိုင်ကြားချက် ခိုင်လုံမှုမရှိသဖြင့် အမှုရှုံးနိမ့်ပါသည်။ မမှန်မကန် တရားစွဲမှုအတွက် ပြစ်ဒဏ်ချမှတ်မည်။\nတရားခံက အမှုနိုင်ပါသည်။\n\nအမှုနိုင်သူသာ ပြစ်ဒဏ်စက်ဝိုင်းကို လှည့်ခွင့်ရှိပါသည်။"
-        for uid in (names[0],names[2]):
-            try: await BOT.send_message(uid,msg)
+        for uid in (people[0],people[3]):
+            try: await BOT.send_message(uid,msg,parse_mode=ParseMode.HTML)
             except Exception: pass
-    return web.json_response({"ok":True,"verdict":verdict,"winnerId":winner,"loserId":loser,"status":"awaiting_spin"})
+    return web.json_response({"ok":True,"verdict":verdict,"winnerId":winner,"loserId":loser,"plaintiffUser":{"name":p_name,"username":p_username},"defendantUser":{"name":d_name,"username":d_username},"status":"awaiting_spin"})
 
 async def court_spin(req):
     b=await req.json(); u=_user(b.get("initData","")); caseid=b.get("caseId")
