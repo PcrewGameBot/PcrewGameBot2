@@ -187,9 +187,11 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.85;a
 #nv button i{filter:drop-shadow(0 4px 4px rgba(90,40,150,.3)) saturate(.85);transition:transform .15s}
 #nv button.on i{transform:translateY(-5px) scale(1.14);filter:drop-shadow(0 6px 6px rgba(90,40,150,.35)) saturate(1.1)}
 #nv button.on::after{background:var(--pink);width:20px;height:5px;bottom:-4px;box-shadow:0 2px 0 #c4156f}
+
+.court-wrap{padding-bottom:18px}.court-card{background:linear-gradient(145deg,#24104f,#120b36);border:1px solid #b99aff55;border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 8px 22px #08051f55;color:#fff}.court-title{font-size:23px;font-weight:900;color:#f5d58b;margin:4px 0 12px}.court-sub{color:#c8bce8;font-size:13px;line-height:1.5}.court-btn{width:100%;border:1px solid #d8bdff55;border-radius:13px;padding:13px 14px;margin:7px 0;background:linear-gradient(180deg,#7547b9,#452078);color:#fff;font-weight:800;font-size:14px}.court-btn:disabled{opacity:.48;filter:grayscale(.55);cursor:not-allowed;background:linear-gradient(180deg,#514763,#30263f);border-style:dashed}.court-btn.gold{background:linear-gradient(180deg,#d7ad58,#8b5b20);color:#241238;border-color:#ffe3a2}.court-input,.court-select{box-sizing:border-box;width:100%;padding:13px;border-radius:12px;border:1px solid #b99aff66;background:#0c0827;color:#fff;margin:7px 0;font:14px system-ui}.court-input::placeholder{color:#a99acb}.court-case{border:1px solid #ffffff22;border-radius:14px;padding:12px;margin:9px 0;background:#ffffff0b}.court-badge{display:inline-block;padding:4px 8px;border-radius:20px;background:#6b4aa4;color:#fff;font-size:11px;font-weight:800}.court-row{display:flex;gap:8px;flex-wrap:wrap}.court-row>*{flex:1;min-width:110px}.court-warn{color:#ffd38a;font-size:13px;line-height:1.5}.court-ok{color:#9ef0c2}.court-deny{color:#ffb4c2}.court-label{font-size:12px;color:#c7b5e8;margin:8px 0 3px}.wheel-overlay{position:fixed;inset:0;background:#09051eeF;z-index:999;display:grid;place-items:center;padding:22px}.wheel-panel{width:min(330px,100%);text-align:center;background:linear-gradient(145deg,#32145d,#120a32);border:2px solid #e6c477;border-radius:24px;padding:22px;color:#fff}.wheel-disc{width:190px;height:190px;margin:15px auto;border-radius:50%;border:8px solid #f4d48b;background:conic-gradient(#7c3aed 0 45deg,#f4c86a 45deg 90deg,#4c1d95 90deg 135deg,#e8b957 135deg 180deg,#6d28d9 180deg 225deg,#f4c86a 225deg 270deg,#4c1d95 270deg 315deg,#e8b957 315deg);box-shadow:0 0 25px #d5a6ff88;display:grid;place-items:center;font-size:42px}.wheel-disc.spin{animation:wheelspin 3.2s cubic-bezier(.12,.72,.12,1) forwards}@keyframes wheelspin{to{transform:rotate(1800deg)}}
 </style></head><body>
 <div id="v"></div>
-<nav id="nv"><button data-t="home" class="on"><i><svg viewBox="0 0 64 64"><defs><linearGradient id="gpA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa6dc"/><stop offset=".55" stop-color="#e2509f"/><stop offset="1" stop-color="#a02677"/></linearGradient><linearGradient id="gpB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6cf"/><stop offset="1" stop-color="#d8c27c"/></linearGradient></defs><ellipse cx="32" cy="57" rx="20" ry="3" fill="#000" opacity=".28"/><path d="M10 28Q10 17 22 17H42Q54 17 54 28L57 46Q57 55 49 55Q44 55 41 49L39 44H25L23 49Q20 55 15 55Q7 55 7 46Z" fill="url(#gpA)"/><path d="M14 26Q16 20 24 20H40Q48 20 50 26Q44 22 32 22Q20 22 14 26Z" fill="#fff" opacity=".4"/><rect x="15" y="28" width="14" height="5.5" rx="2.7" fill="url(#gpB)"/><rect x="19.2" y="23.8" width="5.6" height="14" rx="2.8" fill="url(#gpB)"/><circle cx="44" cy="26.5" r="3.3" fill="url(#gpB)"/><circle cx="50" cy="32" r="3.3" fill="url(#gpB)"/><circle cx="38" cy="32" r="3.3" fill="url(#gpB)"/><circle cx="44" cy="37.5" r="3.3" fill="url(#gpB)"/></svg></i>GAMES</button><button data-t="lb"><i><svg viewBox="0 0 64 64"><defs><linearGradient id="trG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2a8"/><stop offset=".5" stop-color="#ffc83a"/><stop offset="1" stop-color="#df8800"/></linearGradient><linearGradient id="trB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a98ff"/><stop offset="1" stop-color="#2b3fc8"/></linearGradient></defs><ellipse cx="32" cy="60" rx="19" ry="2.6" fill="#000" opacity=".28"/><path d="M17 14C5 13 5 29 21 31" fill="none" stroke="url(#trG)" stroke-width="5" stroke-linecap="round"/><path d="M47 14C59 13 59 29 43 31" fill="none" stroke="url(#trG)" stroke-width="5" stroke-linecap="round"/><path d="M16 9H48V24C48 35 41 42 32 42S16 35 16 24Z" fill="url(#trG)"/><path d="M20 11H26V33C22 30 20 26 20 21Z" fill="#fff" opacity=".42"/><path d="M32 16L34.7 21.4 40.6 22.2 36.3 26.3 37.3 32 32 29.3 26.7 32 27.7 26.3 23.4 22.2 29.3 21.4Z" fill="#fff7cc" opacity=".92"/><rect x="29" y="41" width="6" height="8" fill="url(#trG)"/><rect x="19" y="48" width="26" height="10" rx="3.5" fill="url(#trB)"/><rect x="23" y="50.5" width="18" height="3" rx="1.5" fill="#fff" opacity=".42"/></svg></i>BOARD</button></nav>
+<nav id="nv"><button data-t="home" class="on"><i><svg viewBox="0 0 64 64"><defs><linearGradient id="gpA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa6dc"/><stop offset=".55" stop-color="#e2509f"/><stop offset="1" stop-color="#a02677"/></linearGradient><linearGradient id="gpB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6cf"/><stop offset="1" stop-color="#d8c27c"/></linearGradient></defs><ellipse cx="32" cy="57" rx="20" ry="3" fill="#000" opacity=".28"/><path d="M10 28Q10 17 22 17H42Q54 17 54 28L57 46Q57 55 49 55Q44 55 41 49L39 44H25L23 49Q20 55 15 55Q7 55 7 46Z" fill="url(#gpA)"/><path d="M14 26Q16 20 24 20H40Q48 20 50 26Q44 22 32 22Q20 22 14 26Z" fill="#fff" opacity=".4"/><rect x="15" y="28" width="14" height="5.5" rx="2.7" fill="url(#gpB)"/><rect x="19.2" y="23.8" width="5.6" height="14" rx="2.8" fill="url(#gpB)"/><circle cx="44" cy="26.5" r="3.3" fill="url(#gpB)"/><circle cx="50" cy="32" r="3.3" fill="url(#gpB)"/><circle cx="38" cy="32" r="3.3" fill="url(#gpB)"/><circle cx="44" cy="37.5" r="3.3" fill="url(#gpB)"/></svg></i>GAMES</button><button data-t="lb"><i><svg viewBox="0 0 64 64"><defs><linearGradient id="trG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2a8"/><stop offset=".5" stop-color="#ffc83a"/><stop offset="1" stop-color="#df8800"/></linearGradient><linearGradient id="trB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a98ff"/><stop offset="1" stop-color="#2b3fc8"/></linearGradient></defs><ellipse cx="32" cy="60" rx="19" ry="2.6" fill="#000" opacity=".28"/><path d="M17 14C5 13 5 29 21 31" fill="none" stroke="url(#trG)" stroke-width="5" stroke-linecap="round"/><path d="M47 14C59 13 59 29 43 31" fill="none" stroke="url(#trG)" stroke-width="5" stroke-linecap="round"/><path d="M16 9H48V24C48 35 41 42 32 42S16 35 16 24Z" fill="url(#trG)"/><path d="M20 11H26V33C22 30 20 26 20 21Z" fill="#fff" opacity=".42"/><path d="M32 16L34.7 21.4 40.6 22.2 36.3 26.3 37.3 32 32 29.3 26.7 32 27.7 26.3 23.4 22.2 29.3 21.4Z" fill="#fff7cc" opacity=".92"/><rect x="29" y="41" width="6" height="8" fill="url(#trG)"/><rect x="19" y="48" width="26" height="10" rx="3.5" fill="url(#trB)"/><rect x="23" y="50.5" width="18" height="3" rx="1.5" fill="#fff" opacity=".42"/></svg></i>BOARD</button><button data-t="court"><i>⚖️</i>COURT</button></nav>
 <script>
 const tg=window.Telegram&&Telegram.WebApp,U=(tg&&tg.initDataUnsafe&&tg.initDataUnsafe.user)||{};
 if(tg){tg.ready();tg.expand();try{tg.setHeaderColor('#1b0f5c');tg.setBackgroundColor('#0a0a3f')}catch(e){}tg.BackButton.hide()}
@@ -299,7 +301,70 @@ async function board(){const v=$('v');v.innerHTML='';v.append(hd('Leaderboard'),
  const box=h('div','');v.append(box);let r=[];try{r=await (await fetch('/api/leaderboard?game=overall')).json()}catch(e){}
  if(!r.length)box.append(h('div','empty','No scores yet. Be the first!'));
  r.forEach((x,i)=>{const row=h('div','lr'+(x.name===nm.slice(0,20)?' me':''));row.append(rkb(i),h('span','la',(x.name||'?')[0].toUpperCase()),h('span','ln',x.name),h('span','lx',x.score+' XP'));box.append(row)})}
-function tab(t){document.querySelectorAll('#nv button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='home'?home():board()}
+
+ let COURT={};
+ async function courtReq(path,data={}){
+  const r=await fetch('/api/court/'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg?tg.initData:'',...data})});
+  let j={};try{j=await r.json()}catch(e){};if(!r.ok||j.ok===false)throw new Error(j.error||'Request failed');return j;
+ }
+ function cbtn(label,fn,cls=''){const b=h('button','court-btn '+cls,label);b.onclick=fn;return b}
+ function cinput(ph,max=500){const x=h('textarea','court-input');x.placeholder=ph;x.maxLength=max;x.rows=3;return x}
+ async function court(){
+  const v=$('v');v.innerHTML='';v.append(prof());const wrap=h('div','court-wrap');v.append(wrap);
+  wrap.append(h('div','court-title','⚖️ COUPLE COURT'),h('p','court-sub','A private court for two. LDR mode is available now. In-Person and Both are coming soon.'));
+  let st;try{st=await courtReq('state')}catch(e){wrap.append(h('div','court-card court-deny',e.message));return}
+  COURT=st.court||{};
+  if(!COURT.linked){
+   const card=h('div','court-card');card.append(h('b','','💑 Link your partner'));
+   card.append(h('p','court-sub','Create an invitation code and send it to your partner, or join using their code. Both people must open this Mini App from Telegram.'));
+   card.append(cbtn('➕ CREATE COUPLE INVITE',async()=>{try{const r=await courtReq('create');await navigator.clipboard?.writeText(r.inviteCode).catch(()=>{});alert('Couple ID: '+r.coupleId+'\nInvite code: '+r.inviteCode+'\nSend this code to your partner.');court()}catch(e){alert(e.message)}},'gold'));
+   const inp=h('input','court-input');inp.placeholder='Enter partner invitation code';inp.maxLength=12;card.append(inp,cbtn('🔗 JOIN COUPLE',async()=>{try{await courtReq('join',{code:inp.value});alert('Partner linked!');court()}catch(e){alert(e.message)}}));wrap.append(card);
+   if(COURT.isOwner) await ownerPanel(wrap);return;
+  }
+  const card=h('div','court-card');
+  card.append(h('b','','💑 COUPLE '+COURT.coupleId),h('p','court-sub','Partner: '+(COURT.partnerName||'Waiting')));
+  card.append(h('p','court-sub', 'Permission: '+(COURT.permission?'🟢 ACTIVE':'🔒 NOT GRANTED')));
+  if(!COURT.permission){
+   card.append(h('p','court-warn','🔒 You do not have permission to use Couple Court yet. Please contact the owner to request access.'));
+   if(COURT.ownerUsername){const a=h('a','court-btn','💬 CONTACT OWNER');a.href='https://t.me/'+COURT.ownerUsername.replace('@','');a.target='_blank';card.append(a)}
+   wrap.append(card);if(COURT.isOwner)await ownerPanel(wrap);return;
+  }
+  card.append(h('div','court-label','CHOOSE YOUR RELATIONSHIP TYPE'));
+  const choices=[['ldr','🌍 Long Distance (LDR)','available'],['person','👫 In-Person — COMING SOON','soon'],['both','💕 Both — COMING SOON','soon']];
+  choices.forEach(([key,label,state])=>{const b=cbtn(label,async()=>{try{await courtReq('type',{type:key});court()}catch(e){alert(e.message)}},COURT.myType===key?'gold':'');if(state==='soon'){b.disabled=true;b.title='Coming Soon';}card.append(b)});
+  if(!COURT.typeMatched){card.append(h('p','court-warn',COURT.myType||COURT.partnerType?'⚠️ Both partners must choose the same type. Couple Court remains locked until selections match.':'Choose LDR. Your partner must also choose LDR. In-Person and Both will be available in a future update.'));wrap.append(card);if(COURT.isOwner)await ownerPanel(wrap);return}
+  card.append(h('p','court-ok','✅ Relationship type confirmed: '+COURT.myType.toUpperCase()));
+  if(!COURT.ready){card.append(h('p','court-warn','Waiting for permission or partner confirmation.'));wrap.append(card);if(COURT.isOwner)await ownerPanel(wrap);return}
+  wrap.append(card);
+  const form=h('div','court-card');form.append(h('b','','📝 OPEN A NEW CASE'));
+  const sel=h('select','court-select');[['General','⚖️ General'],['Ignoring','😒 Ignoring'],['Jealousy','💚 Jealousy'],['Communication','💬 Communication'],['Romance','❤️ Romance'],['Gaming','🎮 Gaming'],['Funny','😂 Funny']].forEach(([v,l])=>{const o=h('option','',l);o.value=v;sel.append(o)});
+  const complaint=cinput('Write your complaint (5–1000 characters)...',1000);form.append(sel,complaint,cbtn('⚖️ FILE CASE',async()=>{try{const r=await courtReq('open',{category:sel.value,complaint:complaint.value});alert('Case filed: '+r.caseId+'\nYour partner has been notified.');court()}catch(e){alert(e.message)}},'gold'));wrap.append(form);
+  const cases=COURT.cases||[];const hist=h('div','court-card');hist.append(h('b','','📜 CASE HISTORY'));
+  if(!cases.length)hist.append(h('p','court-sub','No cases yet.'));
+  cases.forEach(c=>{const item=h('div','court-case');item.append(h('span','court-badge',c.status==='completed'?'COMPLETED':'WAITING FOR RESPONSE'),h('p','court-sub',c.id+' · '+c.category),h('p','',c.complaint));if(c.response)item.append(h('p','court-sub','Response: '+c.response));if(c.status==='awaiting_response'&&c.defendant===COURT.myId){const reply=cinput('Write your response (2–1000 characters)...',1000);item.append(reply,cbtn('🗣️ SUBMIT RESPONSE',async()=>{try{const r=await courtReq('respond',{caseId:c.id,response:reply.value});await showCourtResult(r);court()}catch(e){alert(e.message)}},'gold'))}else if(c.status==='awaiting_response')item.append(h('p','court-warn','Waiting for your partner to respond.'));if(c.verdict)item.append(h('b','', 'Verdict: '+c.verdict));if(c.punishment)item.append(h('p','court-warn','🎡 Punishment: '+c.punishment));hist.append(item)});wrap.append(hist);
+  if(COURT.isOwner) await ownerPanel(wrap);
+ }
+
+ async function showCourtResult(r){
+  const overlay=h('div','wheel-overlay'),panel=h('div','wheel-panel');
+  panel.append(h('div','court-title','⚖️ JUDGE VERDICT'));
+  if(r.verdict==='GUILTY'){
+   panel.append(h('p','court-warn','GUILTY! Punishment wheel is spinning...'));
+   const disc=h('div','wheel-disc','⚖️');panel.append(disc);overlay.append(panel);document.body.append(overlay);requestAnimationFrame(()=>disc.classList.add('spin'));
+   await new Promise(resolve=>setTimeout(resolve,3300));
+   panel.append(h('h2','','🎡 PUNISHMENT'),h('p','',r.punishment||'Punishment selected'));
+   panel.append(cbtn('DONE',()=>overlay.remove(),'gold'));
+  }else{
+   panel.append(h('h2','','🔴 NOT GUILTY'),h('p','court-sub','The case is closed. No punishment this time.'));
+   panel.append(cbtn('DONE',()=>overlay.remove(),'gold'));overlay.append(panel);document.body.append(overlay);
+  }
+ }
+ async function ownerPanel(parent){
+  const box=h('div','court-card');box.append(h('b','','👑 OWNER PERMISSION PANEL'),h('p','court-sub','Grant or revoke Couple Court access for linked couples.'));
+  try{const r=await courtReq('owner/list');if(!r.couples.length)box.append(h('p','court-sub','No linked couples yet.'));r.couples.forEach(c=>{const row=h('div','court-case');row.append(h('b','',c.id+' · '+(c.name1||'')+' + '+(c.name2||'Waiting')),h('p','court-sub','Type: '+(c.type1||'-')+' / '+(c.type2||'-')+' · '+(c.permission?'ACTIVE':'LOCKED')));row.append(cbtn(c.permission?'🔒 REVOKE':'✅ GRANT',async()=>{try{await courtReq('owner/permission',{coupleId:c.id,allow:!c.permission});alert('Permission updated.');court()}catch(e){alert(e.message)}},c.permission?'':'gold'));box.append(row)})}catch(e){box.append(h('p','court-warn','Owner access requires OWNER_ID to be configured in Railway variables.'))}
+  parent.append(box);
+ }
+function tab(t){document.querySelectorAll('#nv button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));t==='home'?home():t==='lb'?board():court()}
 document.querySelectorAll('#nv button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
 const nav=$('nv');nav.querySelector('[data-t=home] i').innerHTML=icon('nav-games');nav.querySelector('[data-t=lb] i').innerHTML=icon('nav-board');
 function openLink(e,u){e.preventDefault();if(tg&&tg.openTelegramLink)tg.openTelegramLink(u);else window.open(u,'_blank')}

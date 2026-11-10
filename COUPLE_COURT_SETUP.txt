@@ -1,0 +1,47 @@
+PCREW GAME BOT - COUPLE COURT (LDR-ONLY RELEASE)
+================================================
+
+WHAT IS INCLUDED
+- New COURT tab in the existing Mini App.
+- Couple invitation code: one partner creates a code, the other joins.
+- Owner-only permission grant/revoke panel and bot commands.
+- Relationship type choices: LDR available; In-Person and Both are disabled and shown as COMING SOON.
+- Both partners must select LDR before the court becomes ready.
+- One open case at a time per couple.
+- Plaintiff complaint and defendant response.
+- Random 50/50 GUILTY / NOT GUILTY result after the defendant responds.
+- Guilty cases receive one random LDR punishment.
+- Exactly 400 LDR punishments are bundled in punishments_ldr.json (IDs 1-400; all 400 entries are unique).
+- A selected punishment is not repeated for that couple until that couple has used the full 400-item pool; then that couple's pool resets.
+- Punishment wheel animation displays the backend-selected result.
+- Case history and Telegram notifications.
+
+RAILWAY VARIABLES TO ADD
+Keep your existing variables. Add:
+
+OWNER_ID = your numeric Telegram user ID
+OWNER_USERNAME = your Telegram username without @
+
+To find your numeric Telegram user ID, message the bot with /id. Copy the number shown and set it as OWNER_ID. OWNER_USERNAME is used by the Contact Owner button.
+
+OWNER COMMANDS
+/couples                 List registered couples
+/grant CPXXXXXX          Grant Couple Court permission
+/revoke CPXXXXXX         Revoke Couple Court permission
+/id                      Show your Telegram chat/user ID
+
+DEPLOY
+1. Download and extract this ZIP.
+2. Upload/replace the project files in your existing GitHub repository, keeping the project root files together.
+3. Commit the update and let Railway deploy from the connected GitHub repository.
+4. Add OWNER_ID and OWNER_USERNAME in Railway Variables before using the owner panel.
+5. Open the bot Mini App and select COURT.
+
+IMPORTANT
+- Do not delete or reset your existing database volume. Couple records and case history are stored in the configured database (DB_PATH / DATABASE_URL).
+- Existing public game files and leaderboard code are retained in this project update.
+- This release intentionally does NOT include Love Court, Funny Court, XP, Level, Frame Shop, or XP sales.
+- In-Person and Both are coming soon and are disabled in both the Mini App and backend.
+- The 400 bundled LDR punishments match the four previously prepared DOCX lists, numbered 1-400.
+- The random judge is a 50/50 game mechanic, not a real assessment of who is right.
+- The code has been syntax-checked, but a live Railway deployment has not been performed in this environment. Test on Railway after deployment before relying on it.
