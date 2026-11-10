@@ -117,8 +117,14 @@ q("CREATE TABLE IF NOT EXISTS couples(couple_id TEXT PRIMARY KEY, invite_code TE
 # Safe additive migrations for existing databases.
 try: q("ALTER TABLE couples ADD COLUMN removed INTEGER DEFAULT 0")
 except Exception: pass
+for _col, _typ in (("user1_username","TEXT"),("user1_photo","TEXT"),("user2_username","TEXT"),("user2_photo","TEXT")):
+    try: q(f"ALTER TABLE couples ADD COLUMN {_col} {_typ}")
+    except Exception: pass
 q("CREATE TABLE IF NOT EXISTS court_cases(case_id TEXT PRIMARY KEY, couple_id TEXT, plaintiff BIGINT, defendant BIGINT, category TEXT, complaint TEXT, response TEXT, verdict TEXT, punishment TEXT, status TEXT, created BIGINT, completed BIGINT)")
 q("CREATE TABLE IF NOT EXISTS used_punishments(couple_id TEXT, punishment TEXT, used BIGINT, PRIMARY KEY(couple_id, punishment))")
+for _col, _typ in (("winner_id","BIGINT"),("loser_id","BIGINT"),("title","TEXT")):
+    try: q(f"ALTER TABLE court_cases ADD COLUMN {_col} {_typ}")
+    except Exception: pass
 
 # Phase 1 supports LDR only. In-Person and Both are intentionally Coming Soon.
 with open(os.path.join(HERE, "punishments_ldr.json"), encoding="utf-8") as _pf:
@@ -132,7 +138,7 @@ def _user(init_data):
     return verify(init_data)
 
 def _couple_for(uid):
-    rows=q("SELECT couple_id, invite_code, user1, name1, user2, name2, permission, type1, type2 FROM couples WHERE user1=? OR user2=?", (uid,uid), True)
+    rows=q("SELECT couple_id, invite_code, user1, name1, user2, name2, permission, type1, type2, user1_username, user1_photo, user2_username, user2_photo FROM couples WHERE user1=? OR user2=?", (uid,uid), True)
     return rows[0] if rows else None
 
 def _is_removed(cid):
@@ -147,8 +153,13 @@ def _couple_ready(row):
 
 def _couple_json(row, uid):
     if not row: return {"linked":False,"owner":bool(OWNER_ID and uid==OWNER_ID)}
-    cid, code, u1, n1, u2, n2, perm, t1, t2 = row
+    cid, code, u1, n1, u2, n2, perm, t1, t2 = row[:9]
+    u1_username, u1_photo, u2_username, u2_photo = row[9:13]
+    partner_id = (u2 if uid == u1 else u1) if u2 else None
+    partner_username = (u2_username if uid == u1 else u1_username) if u2 else None
+    partner_photo = (u2_photo if uid == u1 else u1_photo) if u2 else None
     return {"linked":bool(u2),"coupleId":cid,"partnerName":(n2 if uid==u1 else n1) if u2 else None,
+            "partnerId":partner_id,"partnerUsername":partner_username,"partnerPhoto":partner_photo,
             "permission":not _is_removed(cid),"removed":_is_removed(cid),"myType":t1 if uid==u1 else t2,"partnerType":t2 if uid==u1 else t1,
             "typeMatched":bool(t1 and t2 and t1==t2),"ready":_couple_ready(row),
             "inviteCode":code if not u2 else None,"inviteLink":(f"https://t.me/{BOT_USERNAME}?startapp=join_{code}" if code and BOT_USERNAME else None),"owner":bool(OWNER_ID and uid==OWNER_ID)}
@@ -161,8 +172,8 @@ async def court_state(req):
     data["isOwner"]=bool(OWNER_ID and u["id"]==OWNER_ID)
     data["ownerUsername"]=OWNER_USERNAME
     if row:
-        cases=q("SELECT case_id, category, complaint, response, verdict, punishment, status, created, plaintiff, defendant FROM court_cases WHERE couple_id=? ORDER BY created DESC LIMIT 20",(row[0],),True)
-        data["cases"]=[{"id":x[0],"category":x[1],"complaint":x[2],"response":x[3],"verdict":x[4],"punishment":x[5],"status":x[6],"created":x[7],"plaintiff":x[8],"defendant":x[9]} for x in cases]
+        cases=q("SELECT case_id, category, complaint, response, verdict, punishment, status, created, plaintiff, defendant, winner_id, loser_id FROM court_cases WHERE couple_id=? ORDER BY created DESC LIMIT 20",(row[0],),True)
+        data["cases"]=[{"id":x[0],"category":x[1],"complaint":x[2],"response":x[3],"verdict":x[4],"punishment":x[5],"status":x[6],"created":x[7],"plaintiff":x[8],"defendant":x[9],"winner":x[10],"loser":x[11]} for x in cases]
         data["myId"]=u["id"]
         data["isOwner"]=bool(OWNER_ID and u["id"]==OWNER_ID)
         data["ownerUsername"]=OWNER_USERNAME
@@ -175,7 +186,7 @@ async def court_create(req):
     import secrets
     cid="CP"+secrets.token_hex(3).upper(); code=secrets.token_urlsafe(9).replace('-','').replace('_','').upper()[:12]
     name=(u.get("first_name") or u.get("username") or "Player")[:40]
-    q("INSERT INTO couples(couple_id,invite_code,user1,name1,permission,created) VALUES(?,?,?,?,1,?)",(cid,code,u["id"],name,int(time.time())))
+    q("INSERT INTO couples(couple_id,invite_code,user1,name1,permission,created,user1_username,user1_photo) VALUES(?,?,?,?,1,?,?,?)",(cid,code,u["id"],name,int(time.time()),u.get("username"),u.get("photo_url")))
     link=f"https://t.me/{BOT_USERNAME}?startapp=join_{code}" if BOT_USERNAME else None
     return web.json_response({"ok":True,"coupleId":cid,"inviteCode":code,"inviteLink":link,"error":None if link else "Set BOT_USERNAME in Railway Variables to generate Telegram invite links."})
 
@@ -196,7 +207,7 @@ async def court_join(req):
     cid,creator=rows[0]
     if creator==u["id"]: return web.json_response({"ok":False,"error":"You cannot accept your own invitation."},status=400)
     name=(u.get("first_name") or u.get("username") or "Player")[:40]
-    q("UPDATE couples SET user2=?,name2=?,invite_code=NULL WHERE couple_id=? AND user2 IS NULL",(u["id"],name,cid))
+    q("UPDATE couples SET user2=?,name2=?,invite_code=NULL,user2_username=?,user2_photo=? WHERE couple_id=? AND user2 IS NULL",(u["id"],name,u.get("username"),u.get("photo_url"),cid))
     if BOT:
         try: await BOT.send_message(creator,f"💑 Your partner accepted the invitation! Couple ID: {cid}. Both partners must select LDR.")
         except Exception: pass
@@ -219,7 +230,7 @@ async def court_open(req):
     row=_couple_for(u["id"])
     if not _couple_ready(row): return web.json_response({"ok":False,"error":"Both partners must be linked, active, and have selected LDR."},status=403)
     if len(complaint)<5 or len(complaint)>1000: return web.json_response({"ok":False,"error":"Complaint must be 5–1000 characters."},status=400)
-    active=q("SELECT case_id FROM court_cases WHERE couple_id=? AND status='awaiting_response'",(row[0],),True)
+    active=q("SELECT case_id FROM court_cases WHERE couple_id=? AND status IN ('awaiting_response','awaiting_spin')",(row[0],),True)
     if active: return web.json_response({"ok":False,"error":"Please finish the current case first."},status=409)
     import secrets
     caseid="CASE-"+secrets.token_hex(3).upper()
@@ -227,40 +238,58 @@ async def court_open(req):
     plaintiff_name=row[3] if row[2]==u["id"] else row[5]
     q("INSERT INTO court_cases(case_id,couple_id,plaintiff,defendant,category,complaint,status,created) VALUES(?,?,?,?,?,?,?,?)",(caseid,row[0],u["id"],defendant,category,complaint,"awaiting_response",int(time.time())))
     if BOT:
-        try: await BOT.send_message(defendant,f"⚖️ NEW COUPLE COURT CASE\nCase: {caseid}\nFrom: {plaintiff_name}\nCategory: {category}\n\nComplaint: {complaint}\n\nOpen the PCREW Game Mini App to submit your response.")
+        try: await BOT.send_message(defendant,f"⚖️ အမှုအသစ် တင်သွင်းထားပါသည်\nအမှုနံပါတ်: {caseid}\nတရားစွဲသူ: {plaintiff_name}\nအမှုခေါင်းစဉ်: {category}\n\nတိုင်ကြားချက်: {complaint}\n\nPCREW Game Mini App ကိုဖွင့်ပြီး ချေပချက်တင်သွင်းပါ။")
         except Exception: pass
     return web.json_response({"ok":True,"caseId":caseid})
 
 async def court_respond(req):
     b=await req.json(); u=_user(b.get("initData","")); response=(b.get("response") or "").strip(); caseid=b.get("caseId")
-    if not u or len(response)<2 or len(response)>1000: return web.json_response({"ok":False,"error":"Response must be 2–1000 characters."},status=400)
+    if not u or len(response)<2 or len(response)>1000: return web.json_response({"ok":False,"error":"ဖြေဆိုချက်ကို စာလုံး ၂ မှ ၁၀၀၀ အတွင်း ရေးပါ။"},status=400)
     rows=q("SELECT couple_id,plaintiff,defendant,status FROM court_cases WHERE case_id=?",(caseid,),True)
-    if not rows: return web.json_response({"ok":False,"error":"Case not found."},status=404)
+    if not rows: return web.json_response({"ok":False,"error":"အမှုကို မတွေ့ပါ။"},status=404)
     cid,plaintiff,defendant,status=rows[0]
-    if u["id"]!=defendant or status!="awaiting_response": return web.json_response({"ok":False,"error":"You cannot respond to this case."},status=403)
+    if u["id"]!=defendant or status!="awaiting_response": return web.json_response({"ok":False,"error":"ဤအမှုကို ဖြေဆိုခွင့်မရှိပါ။"},status=403)
+    # Random court result: Guilty means plaintiff wins; Not guilty means defendant wins.
     verdict="GUILTY" if __import__('secrets').randbelow(2)==0 else "NOT GUILTY"
-    punishment=None
-    if verdict=="GUILTY":
-        cp=q("SELECT type1 FROM couples WHERE couple_id=?",(cid,),True)[0][0]
-        if cp != "ldr":
-            return web.json_response({"ok":False,"error":"Only LDR mode is available right now."},status=403)
-        allowed=PUNISHMENTS["ldr"]
-        used={x[0] for x in q("SELECT punishment FROM used_punishments WHERE couple_id=?",(cid,),True)}
-        remaining=[x for x in allowed if x not in used]
-        if not remaining:
-            q("DELETE FROM used_punishments WHERE couple_id=?",(cid,)); remaining=allowed
-        punishment=__import__('secrets').choice(remaining)
-        q("INSERT INTO used_punishments(couple_id,punishment,used) VALUES(?,?,?)",(cid,punishment,int(time.time())))
-    q("UPDATE court_cases SET response=?,verdict=?,punishment=?,status='completed',completed=? WHERE case_id=?",(response,verdict,punishment,int(time.time()),caseid))
+    winner=plaintiff if verdict=="GUILTY" else defendant
+    loser=defendant if verdict=="GUILTY" else plaintiff
+    q("UPDATE court_cases SET response=?,verdict=?,winner_id=?,loser_id=?,status='awaiting_spin' WHERE case_id=?",(response,verdict,winner,loser,caseid))
     names=q("SELECT user1,name1,user2,name2 FROM couples WHERE couple_id=?",(cid,),True)[0]
     if BOT:
-        msg=f"⚖️ COURT VERDICT — {caseid}\n\nVerdict: {verdict}"
-        if punishment: msg+=f"\n\n🎡 Punishment: {punishment}\n\nNo skip allowed."
-        else: msg+="\n\nThe case is closed. No punishment this time."
+        if verdict=="GUILTY":
+            msg=f"⚖️ တရားရုံး၏ အမိန့် — {caseid}\n\nတရားခံတွင် အပြစ်ရှိကြောင်း တွေ့ရှိရပါသည်။\nတရားစွဲသူက အမှုနိုင်ပါသည်။\n\nအမှုနိုင်သူသာ ပြစ်ဒဏ်စက်ဝိုင်းကို လှည့်ခွင့်ရှိပါသည်။"
+        else:
+            msg=f"⚖️ တရားရုံး၏ အမိန့် — {caseid}\n\nတရားစွဲသူ၏ တိုင်ကြားချက် ခိုင်လုံမှုမရှိသဖြင့် အမှုရှုံးနိမ့်ပါသည်။ မမှန်မကန် တရားစွဲမှုအတွက် ပြစ်ဒဏ်ချမှတ်မည်။\nတရားခံက အမှုနိုင်ပါသည်။\n\nအမှုနိုင်သူသာ ပြစ်ဒဏ်စက်ဝိုင်းကို လှည့်ခွင့်ရှိပါသည်။"
         for uid in (names[0],names[2]):
             try: await BOT.send_message(uid,msg)
             except Exception: pass
-    return web.json_response({"ok":True,"verdict":verdict,"punishment":punishment})
+    return web.json_response({"ok":True,"verdict":verdict,"winnerId":winner,"loserId":loser,"status":"awaiting_spin"})
+
+async def court_spin(req):
+    b=await req.json(); u=_user(b.get("initData","")); caseid=b.get("caseId")
+    if not u: return web.json_response({"ok":False,"error":"Telegram မှတစ်ဆင့် ဝင်ရောက်ပါ။"},status=401)
+    rows=q("SELECT couple_id,plaintiff,defendant,status,winner_id,loser_id,punishment FROM court_cases WHERE case_id=?",(caseid,),True)
+    if not rows: return web.json_response({"ok":False,"error":"အမှုကို မတွေ့ပါ။"},status=404)
+    cid,plaintiff,defendant,status,winner,loser,existing=rows[0]
+    if status!="awaiting_spin" or not winner or u["id"]!=winner: return web.json_response({"ok":False,"error":"အမှုနိုင်သူသာ စက်ဝိုင်းကို တစ်ကြိမ် လှည့်နိုင်ပါသည်။"},status=403)
+    cp=q("SELECT type1 FROM couples WHERE couple_id=?",(cid,),True)
+    if not cp or cp[0][0]!="ldr": return web.json_response({"ok":False,"error":"လက်ရှိ LDR mode ကိုသာ အသုံးပြုနိုင်ပါသည်။"},status=403)
+    import secrets
+    allowed=PUNISHMENTS["ldr"]
+    used={x[0] for x in q("SELECT punishment FROM used_punishments WHERE couple_id=?",(cid,),True)}
+    remaining=[x for x in allowed if x not in used]
+    if not remaining:
+        q("DELETE FROM used_punishments WHERE couple_id=?",(cid,)); remaining=allowed
+    punishment=secrets.choice(remaining)
+    q("INSERT INTO used_punishments(couple_id,punishment,used) VALUES(?,?,?)",(cid,punishment,int(time.time())))
+    q("UPDATE court_cases SET punishment=?,status='completed',completed=? WHERE case_id=?",(punishment,int(time.time()),caseid))
+    names=q("SELECT user1,user2 FROM couples WHERE couple_id=?",(cid,),True)[0]
+    if BOT:
+        msg=f"🎡 ပြစ်ဒဏ်စက်ဝိုင်း ရလဒ် — {caseid}\n\nပြစ်ဒဏ်ခံယူရမည့်သူ: {'တရားစွဲသူ' if loser==plaintiff else 'တရားခံ'}\n\n{punishment}\n\nဤအမှုအတွက် စက်ဝိုင်းကို လှည့်ပြီးပါပြီ။ ကျော်ခွင့်မရှိပါ။"
+        for uid in names:
+            try: await BOT.send_message(uid,msg)
+            except Exception: pass
+    return web.json_response({"ok":True,"punishment":punishment,"loserId":loser,"status":"completed"})
 
 async def court_owner_list(req):
     b=await req.json(); u=_user(b.get("initData",""))
@@ -523,6 +552,7 @@ async def main():
         web.post("/api/court/type", court_type),
         web.post("/api/court/open", court_open),
         web.post("/api/court/respond", court_respond),
+        web.post("/api/court/spin", court_spin),
         web.post("/api/court/owner/list", court_owner_list),
         web.post("/api/court/owner/status", court_owner_status),
     ])
