@@ -42,6 +42,7 @@ CHANNEL_LINK = env("CHANNEL_LINK") or _cl
 GROUP_LINK = env("GROUP_LINK") or _gl
 OWNER_ID = int(env("OWNER_ID") or 0)
 OWNER_USERNAME = env("OWNER_USERNAME") or ""
+BOT_USERNAME = env("BOT_USERNAME").lstrip("@")
 LOG_CHAT = env("LOG_CHAT_ID")
 if LOG_CHAT.lstrip("-").isdigit():
     LOG_CHAT = int(LOG_CHAT)
@@ -113,6 +114,9 @@ q("CREATE TABLE IF NOT EXISTS scores(game TEXT, uid BIGINT, name TEXT, score BIG
 
 # Couple Court tables. Each couple has its own relationship settings, cases and used punishments.
 q("CREATE TABLE IF NOT EXISTS couples(couple_id TEXT PRIMARY KEY, invite_code TEXT UNIQUE, user1 BIGINT, name1 TEXT, user2 BIGINT, name2 TEXT, permission INTEGER DEFAULT 0, type1 TEXT, type2 TEXT, created BIGINT)")
+# Safe additive migrations for existing databases.
+try: q("ALTER TABLE couples ADD COLUMN removed INTEGER DEFAULT 0")
+except Exception: pass
 q("CREATE TABLE IF NOT EXISTS court_cases(case_id TEXT PRIMARY KEY, couple_id TEXT, plaintiff BIGINT, defendant BIGINT, category TEXT, complaint TEXT, response TEXT, verdict TEXT, punishment TEXT, status TEXT, created BIGINT, completed BIGINT)")
 q("CREATE TABLE IF NOT EXISTS used_punishments(couple_id TEXT, punishment TEXT, used BIGINT, PRIMARY KEY(couple_id, punishment))")
 
@@ -131,16 +135,23 @@ def _couple_for(uid):
     rows=q("SELECT couple_id, invite_code, user1, name1, user2, name2, permission, type1, type2 FROM couples WHERE user1=? OR user2=?", (uid,uid), True)
     return rows[0] if rows else None
 
+def _is_removed(cid):
+    try:
+        rows=q("SELECT removed FROM couples WHERE couple_id=?",(cid,),True)
+        return bool(rows and rows[0][0])
+    except Exception:
+        return False
+
 def _couple_ready(row):
-    return bool(row and row[4] and row[6] and row[7] and row[8] and row[7] == row[8])
+    return bool(row and row[4] and not _is_removed(row[0]) and row[7] == "ldr" and row[8] == "ldr")
 
 def _couple_json(row, uid):
     if not row: return {"linked":False,"owner":bool(OWNER_ID and uid==OWNER_ID)}
     cid, code, u1, n1, u2, n2, perm, t1, t2 = row
     return {"linked":bool(u2),"coupleId":cid,"partnerName":(n2 if uid==u1 else n1) if u2 else None,
-            "permission":bool(perm),"myType":t1 if uid==u1 else t2,"partnerType":t2 if uid==u1 else t1,
+            "permission":not _is_removed(cid),"removed":_is_removed(cid),"myType":t1 if uid==u1 else t2,"partnerType":t2 if uid==u1 else t1,
             "typeMatched":bool(t1 and t2 and t1==t2),"ready":_couple_ready(row),
-            "inviteCode":code if not u2 else None,"owner":bool(OWNER_ID and uid==OWNER_ID)}
+            "inviteCode":code if not u2 else None,"inviteLink":(f"https://t.me/{BOT_USERNAME}?startapp=join_{code}" if code and BOT_USERNAME else None),"owner":bool(OWNER_ID and uid==OWNER_ID)}
 
 async def court_state(req):
     u=_user((await req.json()).get("initData",""))
@@ -162,23 +173,32 @@ async def court_create(req):
     if not u: return web.json_response({"ok":False,"error":"Open inside Telegram."},status=401)
     if _couple_for(u["id"]): return web.json_response({"ok":False,"error":"You are already linked to a couple."},status=409)
     import secrets
-    cid="CP"+secrets.token_hex(3).upper(); code=secrets.token_urlsafe(6).replace('-','').replace('_','').upper()[:8]
+    cid="CP"+secrets.token_hex(3).upper(); code=secrets.token_urlsafe(9).replace('-','').replace('_','').upper()[:12]
     name=(u.get("first_name") or u.get("username") or "Player")[:40]
-    q("INSERT INTO couples(couple_id,invite_code,user1,name1,permission,created) VALUES(?,?,?,?,0,?)",(cid,code,u["id"],name,int(time.time())))
-    return web.json_response({"ok":True,"coupleId":cid,"inviteCode":code})
+    q("INSERT INTO couples(couple_id,invite_code,user1,name1,permission,created) VALUES(?,?,?,?,1,?)",(cid,code,u["id"],name,int(time.time())))
+    link=f"https://t.me/{BOT_USERNAME}?startapp=join_{code}" if BOT_USERNAME else None
+    return web.json_response({"ok":True,"coupleId":cid,"inviteCode":code,"inviteLink":link,"error":None if link else "Set BOT_USERNAME in Railway Variables to generate Telegram invite links."})
+
+async def court_cancel_invite(req):
+    b=await req.json(); u=_user(b.get("initData",""))
+    if not u: return web.json_response({"ok":False},status=401)
+    rows=q("SELECT couple_id FROM couples WHERE user1=? AND user2 IS NULL AND invite_code IS NOT NULL",(u["id"],),True)
+    if not rows: return web.json_response({"ok":False,"error":"No pending invitation found."},status=404)
+    q("DELETE FROM couples WHERE couple_id=?",(rows[0][0],))
+    return web.json_response({"ok":True})
 
 async def court_join(req):
     b=await req.json(); u=_user(b.get("initData","")); code=(b.get("code") or "").strip().upper()
     if not u: return web.json_response({"ok":False},status=401)
     if _couple_for(u["id"]): return web.json_response({"ok":False,"error":"You are already linked to a couple."},status=409)
-    rows=q("SELECT couple_id,user1 FROM couples WHERE invite_code=? AND user2 IS NULL",(code,),True)
-    if not rows: return web.json_response({"ok":False,"error":"Invalid or expired invitation code."},status=404)
-    cid,owner=rows[0]
-    if owner==u["id"]: return web.json_response({"ok":False,"error":"You cannot join your own invitation."},status=400)
+    rows=q("SELECT couple_id,user1 FROM couples WHERE invite_code=? AND user2 IS NULL AND COALESCE(removed,0)=0",(code,),True)
+    if not rows: return web.json_response({"ok":False,"error":"This invitation is invalid, expired, or unavailable."},status=404)
+    cid,creator=rows[0]
+    if creator==u["id"]: return web.json_response({"ok":False,"error":"You cannot accept your own invitation."},status=400)
     name=(u.get("first_name") or u.get("username") or "Player")[:40]
     q("UPDATE couples SET user2=?,name2=?,invite_code=NULL WHERE couple_id=? AND user2 IS NULL",(u["id"],name,cid))
     if BOT:
-        try: await BOT.send_message(owner,f"💑 Your partner joined Couple Court! Couple ID: {cid}. Both of you must choose the same relationship type.")
+        try: await BOT.send_message(creator,f"💑 Your partner accepted the invitation! Couple ID: {cid}. Both partners must select LDR.")
         except Exception: pass
     return web.json_response({"ok":True,"coupleId":cid})
 
@@ -194,10 +214,10 @@ async def court_type(req):
     return web.json_response({"ok":True,"court":_couple_json(updated,u["id"])})
 
 async def court_open(req):
-    b=await req.json(); u=_user(b.get("initData","")); complaint=(b.get("complaint") or "").strip(); category=(b.get("category") or "General")[:30]
+    b=await req.json(); u=_user(b.get("initData","")); complaint=(b.get("complaint") or "").strip(); category=(b.get("title") or b.get("category") or "General").strip()[:80]
     if not u: return web.json_response({"ok":False},status=401)
     row=_couple_for(u["id"])
-    if not _couple_ready(row): return web.json_response({"ok":False,"error":"Couple Court is not active. Check permission and relationship type."},status=403)
+    if not _couple_ready(row): return web.json_response({"ok":False,"error":"Both partners must be linked, active, and have selected LDR."},status=403)
     if len(complaint)<5 or len(complaint)>1000: return web.json_response({"ok":False,"error":"Complaint must be 5–1000 characters."},status=400)
     active=q("SELECT case_id FROM court_cases WHERE couple_id=? AND status='awaiting_response'",(row[0],),True)
     if active: return web.json_response({"ok":False,"error":"Please finish the current case first."},status=409)
@@ -245,19 +265,19 @@ async def court_respond(req):
 async def court_owner_list(req):
     b=await req.json(); u=_user(b.get("initData",""))
     if not u or not OWNER_ID or u["id"]!=OWNER_ID: return web.json_response({"ok":False},status=403)
-    rows=q("SELECT couple_id,name1,name2,user1,user2,permission,type1,type2 FROM couples ORDER BY created DESC LIMIT 100",(),True)
-    return web.json_response({"ok":True,"couples":[{"id":x[0],"name1":x[1],"name2":x[2],"user1":x[3],"user2":x[4],"permission":bool(x[5]),"type1":x[6],"type2":x[7]} for x in rows]})
+    rows=q("SELECT couple_id,name1,name2,user1,user2,type1,type2,COALESCE(removed,0) FROM couples ORDER BY created DESC LIMIT 200",(),True)
+    return web.json_response({"ok":True,"couples":[{"id":x[0],"name1":x[1],"name2":x[2],"user1":x[3],"user2":x[4],"type1":x[5],"type2":x[6],"removed":bool(x[7])} for x in rows]})
 
-async def court_owner_permission(req):
-    b=await req.json(); u=_user(b.get("initData","")); cid=b.get("coupleId"); allow=bool(b.get("allow"))
+async def court_owner_status(req):
+    b=await req.json(); u=_user(b.get("initData","")); cid=(b.get("coupleId") or "").upper(); remove=bool(b.get("remove"))
     if not u or not OWNER_ID or u["id"]!=OWNER_ID: return web.json_response({"ok":False},status=403)
     rows=q("SELECT user1,user2 FROM couples WHERE couple_id=?",(cid,),True)
     if not rows: return web.json_response({"ok":False,"error":"Couple not found."},status=404)
-    q("UPDATE couples SET permission=? WHERE couple_id=?",(1 if allow else 0,cid))
+    q("UPDATE couples SET removed=? WHERE couple_id=?",(1 if remove else 0,cid))
     if BOT:
         for uid in rows[0]:
             if uid:
-                try: await BOT.send_message(uid,"✅ Couple Court permission granted!" if allow else "🔒 Couple Court permission has been disabled.")
+                try: await BOT.send_message(uid,"🚫 This couple has been disabled by the bot owner." if remove else "✅ Your Couple Court access has been restored by the bot owner.")
                 except Exception: pass
     return web.json_response({"ok":True})
 
@@ -456,35 +476,26 @@ async def chat_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def couples_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if not OWNER_ID or update.effective_user.id != OWNER_ID:
-        return
-    rows=q("SELECT couple_id,name1,name2,permission FROM couples ORDER BY created DESC LIMIT 30",(),True)
-    lines=[f"{x[0]} | {x[1]} + {x[2] or 'Waiting'} | {'ACTIVE' if x[3] else 'LOCKED'}" for x in rows]
-    await update.message.reply_text("💑 Couple list\n\n"+("\n".join(lines) if lines else "No couples yet.")+"\n\nUse /grant CPxxxx or /revoke CPxxxx")
-
-async def grant_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not OWNER_ID or update.effective_user.id != OWNER_ID: return
-    if not ctx.args: return await update.message.reply_text("Usage: /grant CPxxxx")
+    rows=q("SELECT couple_id,name1,name2,COALESCE(removed,0) FROM couples ORDER BY created DESC LIMIT 50",(),True)
+    lines=[f"{x[0]} | {x[1]} + {x[2] or 'Waiting'} | {'REMOVED' if x[3] else 'ACTIVE'}" for x in rows]
+    await update.message.reply_text("💑 Couple management\n\n"+("\n".join(lines) if lines else "No couples yet.")+"\n\nUse /remove CPxxxx or /restore CPxxxx")
+
+async def remove_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    if not OWNER_ID or update.effective_user.id != OWNER_ID: return
+    if not ctx.args: return await update.message.reply_text("Usage: /remove CPxxxx")
     cid=ctx.args[0].upper(); rows=q("SELECT user1,user2 FROM couples WHERE couple_id=?",(cid,),True)
     if not rows: return await update.message.reply_text("Couple not found.")
-    q("UPDATE couples SET permission=1 WHERE couple_id=?",(cid,))
-    for uid in rows[0]:
-        if uid:
-            try: await ctx.bot.send_message(uid,"✅ Couple Court permission granted!")
-            except Exception: pass
-    await update.message.reply_text(f"✅ Permission granted: {cid}")
+    q("UPDATE couples SET removed=1 WHERE couple_id=?",(cid,))
+    await update.message.reply_text(f"🚫 Couple removed: {cid}")
 
-async def revoke_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+async def restore_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if not OWNER_ID or update.effective_user.id != OWNER_ID: return
-    if not ctx.args: return await update.message.reply_text("Usage: /revoke CPxxxx")
+    if not ctx.args: return await update.message.reply_text("Usage: /restore CPxxxx")
     cid=ctx.args[0].upper(); rows=q("SELECT user1,user2 FROM couples WHERE couple_id=?",(cid,),True)
     if not rows: return await update.message.reply_text("Couple not found.")
-    q("UPDATE couples SET permission=0 WHERE couple_id=?",(cid,))
-    for uid in rows[0]:
-        if uid:
-            try: await ctx.bot.send_message(uid,"🔒 Couple Court permission has been disabled.")
-            except Exception: pass
-    await update.message.reply_text(f"🔒 Permission revoked: {cid}")
+    q("UPDATE couples SET removed=0 WHERE couple_id=?",(cid,))
+    await update.message.reply_text(f"✅ Couple restored: {cid}")
 
 async def main():
     global BOT
@@ -494,8 +505,8 @@ async def main():
     app.add_handler(CommandHandler("top", top))
     app.add_handler(CommandHandler("id", chat_id))
     app.add_handler(CommandHandler("couples", couples_cmd))
-    app.add_handler(CommandHandler("grant", grant_cmd))
-    app.add_handler(CommandHandler("revoke", revoke_cmd))
+    app.add_handler(CommandHandler("remove", remove_cmd))
+    app.add_handler(CommandHandler("restore", restore_cmd))
 
     web_app = web.Application()
     web_app.add_routes([
@@ -508,11 +519,12 @@ async def main():
         web.post("/api/court/state", court_state),
         web.post("/api/court/create", court_create),
         web.post("/api/court/join", court_join),
+        web.post("/api/court/cancel", court_cancel_invite),
         web.post("/api/court/type", court_type),
         web.post("/api/court/open", court_open),
         web.post("/api/court/respond", court_respond),
         web.post("/api/court/owner/list", court_owner_list),
-        web.post("/api/court/owner/permission", court_owner_permission),
+        web.post("/api/court/owner/status", court_owner_status),
     ])
     runner = web.AppRunner(web_app)
     await runner.setup()
