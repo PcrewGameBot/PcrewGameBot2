@@ -71,12 +71,12 @@ GAMES = {
     "stacktower": {"cat": "tap", "title": "Stack Tower", "emoji": "🧱", "file": "stacktower.html", "xp": 1.5},
     "hoopshot": {"cat": "sport", "title": "Hoop Shot", "emoji": "🏀", "file": "hoopshot.html", "xp": 3},
     "game2048": {"cat": "puzzle", "title": "2048", "emoji": "🔢", "file": "game2048.html", "xp": 0.01},
-    "rhythmtiles": {"cat": "puzzle", "title": "Rhythm Tiles", "emoji": "🎹", "file": "rhythmtiles.html", "xp": 0.1},
-    "knifehit": {"cat": "action", "title": "Knife Hit", "emoji": "🔪", "file": "knifehit.html", "xp": 0.1},
-    "gravityflip": {"cat": "action", "title": "Gravity Flip", "emoji": "🔄", "file": "gravityflip.html", "xp": 0.1},
-    "mergefruits": {"cat": "puzzle", "title": "Merge Fruits", "emoji": "🍉", "file": "mergefruits.html", "xp": 0.1},
-    "helixjump": {"cat": "action", "title": "Helix Jump", "emoji": "🌀", "file": "helixjump.html", "xp": 0.1},
-    "colorswitch": {"cat": "action", "title": "Color Switch", "emoji": "🌈", "file": "colorswitch.html", "xp": 0.1},
+    "helixjump": {"cat": "action", "title": "Helix Jump", "emoji": "🌀", "file": "helixjump.html", "xp": 1.5},
+    "gravityflip": {"cat": "action", "title": "Gravity Flip", "emoji": "🔄", "file": "gravityflip.html", "xp": 0.2},
+    "knifehit": {"cat": "tap", "title": "Knife Hit", "emoji": "🔪", "file": "knifehit.html", "xp": 1.5},
+    "colorswitch": {"cat": "tap", "title": "Color Switch", "emoji": "🎨", "file": "colorswitch.html", "xp": 3},
+    "rhythmtiles": {"cat": "tap", "title": "Rhythm Tiles", "emoji": "🎹", "file": "rhythmtiles.html", "xp": 1},
+    "mergefruits": {"cat": "puzzle", "title": "Merge Fruits", "emoji": "🍇", "file": "mergefruits.html", "xp": 0.03},
 }
 
 # DATABASE_URL set = Postgres (data is never lost), otherwise SQLite
