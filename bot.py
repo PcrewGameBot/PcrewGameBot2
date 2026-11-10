@@ -1,4 +1,4 @@
-import os, json, hmac, hashlib, time, sqlite3, asyncio, html
+import os, json, hmac, hashlib, time, sqlite3, asyncio, html, base64
 from datetime import datetime, timezone
 from urllib.parse import parse_qsl
 from aiohttp import web
@@ -151,6 +151,37 @@ def _is_removed(cid):
 def _couple_ready(row):
     return bool(row and row[4] and not _is_removed(row[0]) and row[7] == "ldr" and row[8] == "ldr")
 
+_profile_cache = {}
+
+async def _telegram_profile(uid):
+    """Fetch a linked user's current Telegram username and profile photo via Bot API."""
+    cached = _profile_cache.get(uid)
+    if cached and time.time() - cached[0] < 300:
+        return cached[1], cached[2]
+    username = None
+    photo_data = None
+    if not BOT:
+        return None, None
+    try:
+        chat = await BOT.get_chat(chat_id=uid)
+        username = getattr(chat, "username", None)
+        photos = await BOT.get_user_profile_photos(user_id=uid, limit=1)
+        if photos.total_count and photos.photos:
+            largest = photos.photos[0][-1]
+            photo_file = await BOT.get_file(largest.file_id)
+            raw = await photo_file.download_as_bytearray()
+            photo_data = "data:image/jpeg;base64," + base64.b64encode(bytes(raw)).decode("ascii")
+    except Exception as exc:
+        # A user who has not started the bot, or whose privacy/API state prevents
+        # access, should still see the saved name and any previously cached photo.
+        print(f"profile refresh unavailable for {uid}: {exc}")
+    if cached:
+        username = username or cached[1]
+        photo_data = photo_data or cached[2]
+    _profile_cache[uid] = (time.time(), username, photo_data)
+    return username, photo_data
+
+
 def _couple_json(row, uid):
     if not row: return {"linked":False,"owner":bool(OWNER_ID and uid==OWNER_ID)}
     cid, code, u1, n1, u2, n2, perm, t1, t2 = row[:9]
@@ -168,6 +199,28 @@ async def court_state(req):
     u=_user((await req.json()).get("initData",""))
     if not u: return web.json_response({"ok":False},status=401)
     row=_couple_for(u["id"])
+    # Every time a linked member opens the Mini App, save the profile fields
+    # Telegram provides in signed initData so their partner can see them too.
+    if row:
+        if u["id"] == row[2]:
+            if u.get("username"): q("UPDATE couples SET user1_username=? WHERE couple_id=?",(u.get("username"),row[0]))
+            if u.get("photo_url"): q("UPDATE couples SET user1_photo=? WHERE couple_id=?",(u.get("photo_url"),row[0]))
+        elif u["id"] == row[4]:
+            if u.get("username"): q("UPDATE couples SET user2_username=? WHERE couple_id=?",(u.get("username"),row[0]))
+            if u.get("photo_url"): q("UPDATE couples SET user2_photo=? WHERE couple_id=?",(u.get("photo_url"),row[0]))
+        row=_couple_for(u["id"])
+    # Refresh the linked partner's public Telegram details instead of relying only
+    # on optional photo_url/username fields captured when the invite was accepted.
+    if row and row[4]:
+        partner_id = row[4] if u["id"] == row[2] else row[2]
+        partner_username, partner_photo = await _telegram_profile(partner_id)
+        if u["id"] == row[2]:
+            if partner_username: q("UPDATE couples SET user2_username=? WHERE couple_id=?",(partner_username,row[0]))
+            if partner_photo: q("UPDATE couples SET user2_photo=? WHERE couple_id=?",(partner_photo,row[0]))
+        else:
+            if partner_username: q("UPDATE couples SET user1_username=? WHERE couple_id=?",(partner_username,row[0]))
+            if partner_photo: q("UPDATE couples SET user1_photo=? WHERE couple_id=?",(partner_photo,row[0]))
+        row=_couple_for(u["id"])
     data=_couple_json(row,u["id"])
     data["isOwner"]=bool(OWNER_ID and u["id"]==OWNER_ID)
     data["ownerUsername"]=OWNER_USERNAME
