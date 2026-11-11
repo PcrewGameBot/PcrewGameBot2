@@ -4,8 +4,8 @@ from urllib.parse import parse_qsl
 from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, MenuButtonWebApp
 from telegram.constants import ParseMode
-from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, InlineQueryHandler, MessageHandler, filters
-from uno_game import UNO
+from telegram.ext import Application, CommandHandler, ContextTypes
+from uno_module import register_uno, uno_start
 
 
 def env(name, default=""):
@@ -113,9 +113,7 @@ else:
     INC = "n + 1"
 
 q("CREATE TABLE IF NOT EXISTS plays(game TEXT PRIMARY KEY, n BIGINT)")
-q("CREATE TABLE IF NOT EXISTS uno_games(game_id TEXT PRIMARY KEY, chat_id BIGINT, data TEXT NOT NULL, status TEXT NOT NULL, updated BIGINT NOT NULL)")
 q("CREATE TABLE IF NOT EXISTS scores(game TEXT, uid BIGINT, name TEXT, score BIGINT, ts BIGINT, PRIMARY KEY(game, uid))")
-UNO_GAME = UNO(q)
 
 # Couple Court tables. Each couple has its own relationship settings, cases and used punishments.
 q("CREATE TABLE IF NOT EXISTS couples(couple_id TEXT PRIMARY KEY, invite_code TEXT UNIQUE, user1 BIGINT, name1 TEXT, user2 BIGINT, name2 TEXT, permission INTEGER DEFAULT 0, type1 TEXT, type2 TEXT, created BIGINT)")
@@ -544,6 +542,10 @@ async def log_start(bot, u):
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     global FILE_ID
+    # In groups, /start belongs to an active UNO lobby; in private chats it remains the Mini App welcome command.
+    if update.effective_chat and update.effective_chat.type in ("group", "supergroup"):
+        if await uno_start(update, ctx):
+            return
     msg = update.message
     kb = start_kb()
     try:
@@ -599,16 +601,13 @@ async def main():
     global BOT
     app = Application.builder().token(TOKEN).build()
     BOT = app.bot
-    app.add_handler(CommandHandler("uno", UNO_GAME.command))
-    app.add_handler(CallbackQueryHandler(UNO_GAME.callback, pattern=r"^u(?:j|s|x|d|c|a|w|n):"))
-    app.add_handler(InlineQueryHandler(UNO_GAME.inline))
-    app.add_handler(MessageHandler(filters.Regex(r"^!uno(?:\||_no_play)"), UNO_GAME.action_message))
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("top", top))
     app.add_handler(CommandHandler("id", chat_id))
     app.add_handler(CommandHandler("couples", couples_cmd))
     app.add_handler(CommandHandler("remove", remove_cmd))
     app.add_handler(CommandHandler("restore", restore_cmd))
+    await register_uno(app, q)
 
     web_app = web.Application()
     web_app.add_routes([

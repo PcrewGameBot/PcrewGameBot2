@@ -1,16 +1,27 @@
-PCREW UNO — SETUP
+PCREW UNO - GROUP-ONLY BUILD
+============================
 
-1. This is a group-chat UNO mode. Add the existing PCREW bot to the Telegram group.
-2. Make the bot an administrator with permission to delete messages (needed to remove inline card-action messages from the public group).
-3. Open @BotFather -> /mybots -> select the PCREW bot -> Bot Settings -> Inline Mode -> Turn on.
-4. In the group, run /uno. Players press JOIN; the creator presses START.
-5. On each turn, press CHOOSE CARD. Telegram opens inline mode in the same group; choose a playable card. The temporary action message is deleted by the bot.
-6. DRAW CARD draws one card. If it is playable, the player may choose it before ending the turn.
+This build removes private-chat hand delivery. It uses Telegram inline mode:
+- /new, /join, /start, /leave, /stop are group commands.
+- The group game message has CHOOSE CARD and DRAW CARD buttons.
+- CHOOSE CARD opens personalized inline results in the current group's message composer.
+  Only the querying player sees their own playable-card choices.
+- Selecting a card posts a confirmation card message into the group; pressing PLAY CARD
+  validates the player, turn, card index and game state before playing it.
+- No UNO hand is sent to a private chat, and /hand is not registered.
 
-Commands: /uno
+REQUIRED TELEGRAM SETUP
+1. In @BotFather: /mybots -> select PCREW bot -> Bot Settings -> Inline Mode -> Turn On.
+2. Set an inline placeholder, e.g. "Choose your UNO card in this group".
+3. Deploy this project and add the bot to a test group.
+4. Test with two Telegram users: /new, /join, /start; then use CHOOSE CARD.
 
-Important:
-- UNO state is stored in the same configured SQLite/PostgreSQL database as PCREW, so an active game can survive a bot restart.
-- Do not publish BOT_TOKEN. Keep it in the hosting provider's environment variables.
-- Existing PCREW Mini App routes, game files, Couple Court routes and score tables are left intact.
-- Telegram Inline Mode is mandatory for private hand selection while staying in the group. If it is not enabled, CHOOSE CARD will not return cards.
+IMPORTANT LIMITATIONS / TESTING
+- The public sticker set name is recorded as "unocards" and its availability is logged at startup.
+  This build does not yet map every sticker in that set to the 108 logical UNO card identities;
+  the group game currently displays card names/emojis as text. Sticker ordering must be inspected
+  and mapped explicitly before claiming exact sticker-art support.
+- Validate all game flows in a test group before production use. This build has not been
+  live-tested against Telegram in this environment.
+- Wild color selection is group-based. +4 challenge and formal UNO-call penalty enforcement
+  are not implemented in this patch.
