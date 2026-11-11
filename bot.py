@@ -61,6 +61,8 @@ BOT = None
 # To add a game: upload its html file and add one line here.
 # xp = XP per 1 score point, used for the Overall leaderboard (0.1 = 100 score is 10 XP).
 GAMES = {
+    "escaperoom": {"cat": "puzzle", "title": "Escape Room", "emoji": "🗝️", "file": "escaperoom.html", "xp": 10},
+
     "thunderstorm": {"cat": "action", "title": "Thunderstorm Survival", "emoji": "⚡", "file": "thunderstorm.html", "xp": 0.1},
     "spaceshooter": {"cat": "action", "title": "Space Shooter", "emoji": "🚀", "file": "spaceshooter.html", "xp": 0.05},
     "sortcolors": {"cat": "puzzle", "title": "Sort the Colours", "emoji": "🧪", "file": "sortcolors.html", "xp": 0.05},
