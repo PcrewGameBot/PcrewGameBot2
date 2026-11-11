@@ -1,0 +1,16 @@
+PCREW UNO — SETUP
+
+1. This is a group-chat UNO mode. Add the existing PCREW bot to the Telegram group.
+2. Make the bot an administrator with permission to delete messages (needed to remove inline card-action messages from the public group).
+3. Open @BotFather -> /mybots -> select the PCREW bot -> Bot Settings -> Inline Mode -> Turn on.
+4. In the group, run /uno. Players press JOIN; the creator presses START.
+5. On each turn, press CHOOSE CARD. Telegram opens inline mode in the same group; choose a playable card. The temporary action message is deleted by the bot.
+6. DRAW CARD draws one card. If it is playable, the player may choose it before ending the turn.
+
+Commands: /uno
+
+Important:
+- UNO state is stored in the same configured SQLite/PostgreSQL database as PCREW, so an active game can survive a bot restart.
+- Do not publish BOT_TOKEN. Keep it in the hosting provider's environment variables.
+- Existing PCREW Mini App routes, game files, Couple Court routes and score tables are left intact.
+- Telegram Inline Mode is mandatory for private hand selection while staying in the group. If it is not enabled, CHOOSE CARD will not return cards.
