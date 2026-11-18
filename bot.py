@@ -1,5 +1,6 @@
 import os, json, hmac, hashlib, time, sqlite3, asyncio, html, base64
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl
 from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, MenuButtonWebApp
@@ -123,7 +124,7 @@ except Exception: pass
 # Keep old couple records for court history, but hide unlinked couples from active lookups.
 try: q("ALTER TABLE couples ADD COLUMN unlinked INTEGER DEFAULT 0")
 except Exception: pass
-for _col, _typ in (("user1_username","TEXT"),("user1_photo","TEXT"),("user2_username","TEXT"),("user2_photo","TEXT")):
+for _col, _typ in (("user1_username","TEXT"),("user1_photo","TEXT"),("user2_username","TEXT"),("user2_photo","TEXT"),("love_points","BIGINT DEFAULT 0"),("checkin1_date","TEXT"),("checkin2_date","TEXT"),("streak","BIGINT DEFAULT 0"),("last_completed_date","TEXT")):
     try: q(f"ALTER TABLE couples ADD COLUMN {_col} {_typ}")
     except Exception: pass
 q("CREATE TABLE IF NOT EXISTS court_cases(case_id TEXT PRIMARY KEY, couple_id TEXT, plaintiff BIGINT, defendant BIGINT, category TEXT, complaint TEXT, response TEXT, verdict TEXT, punishment TEXT, status TEXT, created BIGINT, completed BIGINT)")
@@ -231,6 +232,12 @@ async def court_state(req):
     data["isOwner"]=bool(OWNER_ID and u["id"]==OWNER_ID)
     data["ownerUsername"]=OWNER_USERNAME
     if row:
+        rs = q("SELECT COALESCE(love_points,0), checkin1_date, checkin2_date, COALESCE(streak,0), last_completed_date FROM couples WHERE couple_id=?", (row[0],), True)[0]
+        today_s = datetime.now(ZoneInfo("Asia/Kuala_Lumpur")).date().isoformat()
+        data["relationship"] = {"lovePoints": int(rs[0] or 0), "level": int(rs[0] or 0) // 100 + 1,
+            "streak": int(rs[3] or 0), "myChecked": (rs[1] if u["id"] == row[2] else rs[2]) == today_s,
+            "partnerChecked": (rs[2] if u["id"] == row[2] else rs[1]) == today_s,
+            "completedToday": rs[4] == today_s}
         cases=q("SELECT case_id, category, complaint, response, verdict, punishment, status, created, plaintiff, defendant, winner_id, loser_id FROM court_cases WHERE couple_id=? ORDER BY created DESC LIMIT 20",(row[0],),True)
         cpl=q("SELECT user1,name1,user1_username,user2,name2,user2_username FROM couples WHERE couple_id=?",(row[0],),True)[0]
         def case_person(uid):
@@ -241,6 +248,40 @@ async def court_state(req):
         data["isOwner"]=bool(OWNER_ID and u["id"]==OWNER_ID)
         data["ownerUsername"]=OWNER_USERNAME
     return web.json_response({"ok":True,"court":data})
+
+async def court_checkin(req):
+    """Each partner checks in once per Kuala Lumpur day; completing both earns shared Love Points."""
+    b = await req.json()
+    u = _user(b.get("initData", ""))
+    if not u:
+        return web.json_response({"ok": False, "error": "Open inside Telegram."}, status=401)
+    row = _couple_for(u["id"])
+    if not row or not row[4]:
+        return web.json_response({"ok": False, "error": "You need an active partner relationship first."}, status=403)
+    cid, user1, user2 = row[0], row[2], row[4]
+    today = datetime.now(ZoneInfo("Asia/Kuala_Lumpur")).date()
+    today_s = today.isoformat()
+    yesterday_s = (today - __import__("datetime").timedelta(days=1)).isoformat()
+    col = "checkin1_date" if u["id"] == user1 else "checkin2_date"
+    stats = q("SELECT COALESCE(love_points,0), checkin1_date, checkin2_date, COALESCE(streak,0), last_completed_date FROM couples WHERE couple_id=?", (cid,), True)[0]
+    points, c1, c2, streak, last_done = stats
+    if (c1 if col == "checkin1_date" else c2) == today_s:
+        return web.json_response({"ok": True, "already": True, "message": "You have already checked in today."})
+    q(f"UPDATE couples SET {col}=? WHERE couple_id=?", (today_s, cid))
+    c1 = today_s if col == "checkin1_date" else c1
+    c2 = today_s if col == "checkin2_date" else c2
+    completed = False
+    if c1 == today_s and c2 == today_s and last_done != today_s:
+        streak = (streak + 1) if last_done == yesterday_s else 1
+        points += 50
+        q("UPDATE couples SET love_points=?, streak=?, last_completed_date=? WHERE couple_id=?", (points, streak, today_s, cid))
+        completed = True
+    level = (int(points) // 100) + 1
+    return web.json_response({"ok": True, "already": False, "completed": completed,
+        "myChecked": True, "partnerChecked": c1 == today_s and c2 == today_s,
+        "lovePoints": int(points), "level": level, "streak": int(streak),
+        "message": "Both partners checked in! +50 Love Points." if completed else "Check-in saved. Waiting for your partner."})
+
 
 async def court_create(req):
     b=await req.json(); u=_user(b.get("initData",""))
@@ -638,6 +679,7 @@ async def main():
         web.post("/api/score", api_score),
         web.post("/api/me", api_me),
         web.post("/api/court/state", court_state),
+        web.post("/api/court/checkin", court_checkin),
         web.post("/api/court/create", court_create),
         web.post("/api/court/join", court_join),
         web.post("/api/court/cancel", court_cancel_invite),
