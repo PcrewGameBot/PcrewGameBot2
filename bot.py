@@ -120,6 +120,9 @@ q("CREATE TABLE IF NOT EXISTS couples(couple_id TEXT PRIMARY KEY, invite_code TE
 # Safe additive migrations for existing databases.
 try: q("ALTER TABLE couples ADD COLUMN removed INTEGER DEFAULT 0")
 except Exception: pass
+# Keep old couple records for court history, but hide unlinked couples from active lookups.
+try: q("ALTER TABLE couples ADD COLUMN unlinked INTEGER DEFAULT 0")
+except Exception: pass
 for _col, _typ in (("user1_username","TEXT"),("user1_photo","TEXT"),("user2_username","TEXT"),("user2_photo","TEXT")):
     try: q(f"ALTER TABLE couples ADD COLUMN {_col} {_typ}")
     except Exception: pass
@@ -141,7 +144,7 @@ def _user(init_data):
     return verify(init_data)
 
 def _couple_for(uid):
-    rows=q("SELECT couple_id, invite_code, user1, name1, user2, name2, permission, type1, type2, user1_username, user1_photo, user2_username, user2_photo FROM couples WHERE user1=? OR user2=?", (uid,uid), True)
+    rows=q("SELECT couple_id, invite_code, user1, name1, user2, name2, permission, type1, type2, user1_username, user1_photo, user2_username, user2_photo FROM couples WHERE (user1=? OR user2=?) AND COALESCE(unlinked,0)=0 ORDER BY created DESC LIMIT 1", (uid,uid), True)
     return rows[0] if rows else None
 
 def _is_removed(cid):
@@ -272,6 +275,23 @@ async def court_join(req):
         try: await BOT.send_message(creator,f"💑 Your partner accepted the invitation! Couple ID: {cid}. Both partners must select LDR.")
         except Exception: pass
     return web.json_response({"ok":True,"coupleId":cid})
+
+async def court_unlink(req):
+    """Immediately unlink both partners while preserving the old court history."""
+    b = await req.json()
+    u = _user(b.get("initData", ""))
+    if not u:
+        return web.json_response({"ok": False, "error": "Open inside Telegram."}, status=401)
+
+    row = _couple_for(u["id"])
+    if not row or not row[4]:
+        return web.json_response({"ok": False, "error": "You are not linked to an active partner."}, status=404)
+
+    # Mark the relationship as unlinked instead of deleting it. This preserves
+    # existing court_cases and used_punishments as historical records.
+    q("UPDATE couples SET unlinked=1, invite_code=NULL WHERE couple_id=?", (row[0],))
+    return web.json_response({"ok": True, "unlinked": True, "message": "Relationship unlinked for both partners."})
+
 
 async def court_type(req):
     b=await req.json(); u=_user(b.get("initData","")); typ=b.get("type")
@@ -622,6 +642,7 @@ async def main():
         web.post("/api/court/join", court_join),
         web.post("/api/court/cancel", court_cancel_invite),
         web.post("/api/court/type", court_type),
+        web.post("/api/court/unlink", court_unlink),
         web.post("/api/court/open", court_open),
         web.post("/api/court/respond", court_respond),
         web.post("/api/court/spin", court_spin),
