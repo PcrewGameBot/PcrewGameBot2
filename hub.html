@@ -339,6 +339,27 @@ async function board(){const v=$('v');v.innerHTML='';v.append(hd('Leaderboard'),
   card.append(h('p','court-ok','✅ Relationship type confirmed: LDR'));
   if(!COURT.ready){card.append(h('p','court-warn','Waiting for your partner to select LDR.'));wrap.append(card);if(COURT.isOwner)await ownerPanel(wrap);return}
   wrap.append(card);
+  // Love Court: private two-person prompts with one answer per partner.
+  const loveBox=h('div','court-card');loveBox.append(h('b','','💗 LOVE COURT'),h('p','court-sub','Answer a romantic question separately. When both partners answer, you can reveal each other’s answers and earn 10 Couple Love Points.'));
+  const loveSelect=h('select','court-input');
+  [['first_impression','First Impression'],['favorite_memory','Favorite Memory'],['miss_most','What You Miss'],['love_language','Love Language'],['dream_date','Dream Date'],['little_thing','Little Things'],['future_plan','Future Together'],['confession','Love Confession']].forEach(([value,label])=>{const op=document.createElement('option');op.value=value;op.textContent=label;loveSelect.append(op)});
+  loveBox.append(loveSelect,cbtn('💌 SEND LOVE CHALLENGE',async()=>{try{const r=await courtReq('love/create',{category:loveSelect.value});alert(r.message||'Love Court challenge sent!');court()}catch(e){alert(e.message)}},'gold'));
+  const loveItems=COURT.loveChallenges||[];
+  if(!loveItems.length)loveBox.append(h('p','court-sub','No Love Court challenges yet.'));
+  loveItems.forEach(ch=>{
+   const item=h('div','court-case');item.append(h('b','',ch.category+' · '+ch.id),h('p','court-sub',ch.prompt));
+   if(ch.status==='completed'){
+    const mine=COURT.myId===ch.creator?ch.answerCreator:ch.answerPartner;
+    const partner=COURT.myId===ch.creator?ch.answerPartner:ch.answerCreator;
+    item.append(h('span','court-badge','💗 COMPLETED · +10 LOVE POINTS'),h('p','','Your answer: '+mine),h('p','court-sub','Partner’s answer: '+partner));
+   }else{
+    const mine=COURT.myId===ch.creator?ch.answerCreator:ch.answerPartner;
+    if(mine===null||mine===undefined){const answer=cinput('Write your answer (1–300 characters)...',300);item.append(answer,cbtn('💗 SUBMIT MY ANSWER',async()=>{try{const r=await courtReq('love/answer',{challengeId:ch.id,answer:answer.value});alert(r.message);court()}catch(e){alert(e.message)}},'gold'))}
+    else item.append(h('p','court-warn','✅ Your answer is saved. Waiting for your partner.'));
+   }
+   loveBox.append(item);
+  });
+  wrap.append(loveBox);
   const form=h('div','court-card');form.append(h('b','','📝 OPEN A NEW CASE'));
   const title=h('input','court-input');title.placeholder='Case title (e.g. Replying late)';title.maxLength=80;
   const complaint=cinput('Write anything you want to complain about (5–1000 characters)...',1000);

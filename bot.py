@@ -1,4 +1,4 @@
-import os, json, hmac, hashlib, time, sqlite3, asyncio, html, base64
+import os, json, hmac, hashlib, time, sqlite3, asyncio, html, base64, secrets
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl
@@ -129,6 +129,9 @@ for _col, _typ in (("user1_username","TEXT"),("user1_photo","TEXT"),("user2_user
     except Exception: pass
 q("CREATE TABLE IF NOT EXISTS court_cases(case_id TEXT PRIMARY KEY, couple_id TEXT, plaintiff BIGINT, defendant BIGINT, category TEXT, complaint TEXT, response TEXT, verdict TEXT, punishment TEXT, status TEXT, created BIGINT, completed BIGINT)")
 q("CREATE TABLE IF NOT EXISTS used_punishments(couple_id TEXT, punishment TEXT, used BIGINT, PRIMARY KEY(couple_id, punishment))")
+# Love Court is additive: it uses separate tables and never changes existing case history.
+q("CREATE TABLE IF NOT EXISTS love_challenges(challenge_id TEXT PRIMARY KEY, couple_id TEXT NOT NULL, creator_id BIGINT NOT NULL, partner_id BIGINT NOT NULL, category TEXT NOT NULL, prompt TEXT NOT NULL, answer_creator TEXT, answer_partner TEXT, status TEXT NOT NULL, created BIGINT NOT NULL, completed BIGINT)")
+q("CREATE TABLE IF NOT EXISTS love_court_rewards(challenge_id TEXT PRIMARY KEY, couple_id TEXT NOT NULL, points BIGINT NOT NULL, awarded BIGINT NOT NULL)")
 for _col, _typ in (("winner_id","BIGINT"),("loser_id","BIGINT"),("title","TEXT")):
     try: q(f"ALTER TABLE court_cases ADD COLUMN {_col} {_typ}")
     except Exception: pass
@@ -244,10 +247,83 @@ async def court_state(req):
             if uid == cpl[0]: return {"name":cpl[1] or "Player", "username":cpl[2]}
             return {"name":cpl[4] or "Player", "username":cpl[5]}
         data["cases"]=[{"id":x[0],"category":x[1],"complaint":x[2],"response":x[3],"verdict":x[4],"punishment":x[5],"status":x[6],"created":x[7],"plaintiff":x[8],"defendant":x[9],"winner":x[10],"loser":x[11],"plaintiffUser":case_person(x[8]),"defendantUser":case_person(x[9])} for x in cases]
+        love_rows=q("SELECT challenge_id,creator_id,partner_id,category,prompt,answer_creator,answer_partner,status,created,completed FROM love_challenges WHERE couple_id=? ORDER BY created DESC LIMIT 30",(row[0],),True)
+        data["loveChallenges"]=[]
+        for x in love_rows:
+            reveal=x[7]=="completed"
+            data["loveChallenges"].append({"id":x[0],"creator":x[1],"partner":x[2],"category":x[3],"prompt":x[4],
+                "answerCreator":x[5] if reveal or u["id"]==x[1] else None,
+                "answerPartner":x[6] if reveal or u["id"]==x[2] else None,
+                "status":x[7],"created":x[8],"completed":x[9]})
         data["myId"]=u["id"]
         data["isOwner"]=bool(OWNER_ID and u["id"]==OWNER_ID)
         data["ownerUsername"]=OWNER_USERNAME
     return web.json_response({"ok":True,"court":data})
+
+LOVE_COURT_PROMPTS = {
+    "first_impression": ("First Impression", "What was your first impression of your partner?"),
+    "favorite_memory": ("Favorite Memory", "What is your favorite memory together?"),
+    "miss_most": ("Missing You", "What do you miss most about your partner?"),
+    "love_language": ("Love Language", "What makes you feel most loved by your partner?"),
+    "dream_date": ("Dream Date", "Describe your perfect date together."),
+    "little_thing": ("Little Things", "What small thing does your partner do that makes you smile?"),
+    "future_plan": ("Future Together", "What is one thing you hope to do together in the future?"),
+    "confession": ("Love Confession", "Tell your partner one thing you do not say often enough.")
+}
+
+async def love_court_create(req):
+    b=await req.json(); u=_user(b.get("initData","")); category=(b.get("category") or "").strip()
+    if not u: return web.json_response({"ok":False,"error":"Please open this feature through Telegram."},status=401)
+    row=_couple_for(u["id"])
+    if not _couple_ready(row): return web.json_response({"ok":False,"error":"Both partners must be linked and have selected LDR first."},status=403)
+    if category not in LOVE_COURT_PROMPTS: return web.json_response({"ok":False,"error":"Please choose a valid Love Court question."},status=400)
+    partner_id=row[4] if u["id"]==row[2] else row[2]
+    active=q("SELECT challenge_id FROM love_challenges WHERE couple_id=? AND status='pending' LIMIT 1",(row[0],),True)
+    if active: return web.json_response({"ok":False,"error":"Finish your current Love Court challenge before starting another."},status=409)
+    title,prompt=LOVE_COURT_PROMPTS[category]
+    cid="LOVE-"+secrets.token_hex(3).upper()
+    q("INSERT INTO love_challenges(challenge_id,couple_id,creator_id,partner_id,category,prompt,status,created) VALUES(?,?,?,?,?,?,?,?)",(cid,row[0],u["id"],partner_id,title,prompt,"pending",int(time.time())))
+    if BOT:
+        try: await BOT.send_message(partner_id,f"💗 A new Love Court challenge is waiting for you!\n{prompt}\n\nOpen the PCREW Mini App → Couple Court to answer.")
+        except Exception: pass
+    return web.json_response({"ok":True,"challengeId":cid,"message":"Your Love Court challenge was sent."})
+
+async def love_court_answer(req):
+    b=await req.json(); u=_user(b.get("initData","")); challenge_id=(b.get("challengeId") or "").strip().upper(); answer=(b.get("answer") or "").strip()
+    if not u: return web.json_response({"ok":False,"error":"Please open this feature through Telegram."},status=401)
+    if not challenge_id or len(answer)<1 or len(answer)>300: return web.json_response({"ok":False,"error":"Your answer must contain 1–300 characters."},status=400)
+    rows=q("SELECT couple_id,creator_id,partner_id,status,answer_creator,answer_partner FROM love_challenges WHERE challenge_id=?",(challenge_id,),True)
+    if not rows: return web.json_response({"ok":False,"error":"Love Court challenge not found."},status=404)
+    couple_id,creator_id,partner_id,status,answer_creator,answer_partner=rows[0]
+    active_couple=_couple_for(u["id"])
+    if not active_couple or active_couple[0]!=couple_id or not _couple_ready(active_couple):
+        return web.json_response({"ok":False,"error":"This Love Court challenge is no longer active for your relationship."},status=403)
+    if u["id"] not in (creator_id,partner_id): return web.json_response({"ok":False,"error":"This challenge belongs to another couple."},status=403)
+    if status!="pending": return web.json_response({"ok":False,"error":"This challenge has already been completed."},status=409)
+    if u["id"]==creator_id:
+        if answer_creator is not None: return web.json_response({"ok":False,"error":"You have already answered this challenge."},status=409)
+        q("UPDATE love_challenges SET answer_creator=? WHERE challenge_id=? AND answer_creator IS NULL AND status='pending'",(answer,challenge_id))
+    else:
+        if answer_partner is not None: return web.json_response({"ok":False,"error":"You have already answered this challenge."},status=409)
+        q("UPDATE love_challenges SET answer_partner=? WHERE challenge_id=? AND answer_partner IS NULL AND status='pending'",(answer,challenge_id))
+    latest=q("SELECT answer_creator,answer_partner,status FROM love_challenges WHERE challenge_id=?",(challenge_id,),True)[0]
+    completed=False
+    if latest[0] is not None and latest[1] is not None and latest[2]=="pending":
+        q("UPDATE love_challenges SET status='completed',completed=? WHERE challenge_id=? AND status='pending' AND answer_creator IS NOT NULL AND answer_partner IS NOT NULL",(int(time.time()),challenge_id))
+        latest=q("SELECT answer_creator,answer_partner,status FROM love_challenges WHERE challenge_id=?",(challenge_id,),True)[0]
+        completed=latest[2]=="completed"
+        if completed:
+            # A unique reward ledger prevents duplicate points if both clients refresh together.
+            try:
+                q("INSERT INTO love_court_rewards(challenge_id,couple_id,points,awarded) VALUES(?,?,10,?)",(challenge_id,couple_id,int(time.time())))
+                q("UPDATE couples SET love_points=COALESCE(love_points,0)+10 WHERE couple_id=?",(couple_id,))
+            except Exception:
+                pass
+            if BOT:
+                for uid in (creator_id,partner_id):
+                    try: await BOT.send_message(uid,"💗 Your Love Court challenge is complete! Both answers are now available in the Mini App. +10 Couple Love Points!")
+                    except Exception: pass
+    return web.json_response({"ok":True,"completed":completed,"waiting":not (latest[0] is not None and latest[1] is not None),"message":"Both answers are saved! +10 Couple Love Points." if completed else "Your answer is saved. Waiting for your partner."})
 
 async def court_checkin(req):
     """Each partner checks in once per Kuala Lumpur day; completing both earns shared Love Points."""
@@ -679,6 +755,8 @@ async def main():
         web.post("/api/score", api_score),
         web.post("/api/me", api_me),
         web.post("/api/court/state", court_state),
+        web.post("/api/court/love/create", love_court_create),
+        web.post("/api/court/love/answer", love_court_answer),
         web.post("/api/court/checkin", court_checkin),
         web.post("/api/court/create", court_create),
         web.post("/api/court/join", court_join),
